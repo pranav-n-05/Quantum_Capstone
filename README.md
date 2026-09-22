@@ -141,6 +141,52 @@ deliberately disabled until it is wired up.
 
 ---
 
+## Bloch Lab
+
+The **Bloch Lab** tab is one qubit you can take apart. Every gate is drawn as
+what it physically is — a rotation of the sphere — so H visibly swings |0⟩
+round the (x̂+ẑ)/√2 axis instead of teleporting to |+⟩.
+
+- **Gates:** X Y Z H S S† T T†, Rx/Ry/Rz by any angle, a rotation about *any*
+  axis (the axis is drawn as a ghost while you choose it), Qiskit's U(θ, φ, λ),
+  or set θ/φ directly
+- **Inspector:** probabilities, (x, y, z), θ/φ, the ket, the density matrix and
+  its purity
+- **Measure:** collapse the qubit with one shot, or sample thousands of fresh
+  copies against the Born-rule prediction
+- **Decoherence:** T1/T2 relaxation pulls the arrow *inside* the sphere — a
+  mixed state no ket can describe. Presets are typical figures for each
+  processor family, not live calibration (the IBM API does not report them)
+- **Challenges:** ten "steer onto the ghost" puzzles with a gate budget and a
+  live fidelity meter; progress is kept in the browser
+
+## Algorithms
+
+The **Algorithms** tab runs eight algorithms as a step-through debugger:
+Bell state, teleportation, superdense coding, Deutsch–Jozsa,
+Bernstein–Vazirani, Grover, the QFT and phase estimation.
+
+Play, pause, scrub, or step with ← →. For every step you see:
+
+- the circuit with a playhead
+- the full statevector, where **bar height is |amplitude| and colour is its
+  phase** — the sign flips that make Grover and Deutsch–Jozsa work are
+  invisible in probabilities and obvious in colour
+- one mini Bloch sphere per qubit, whose arrow **shrinks when the qubit
+  becomes entangled** — entanglement you can see without any maths
+- a plain-English account of what the step did, with the maths one click away,
+  an analogy for the whole algorithm, and classical-vs-quantum query counts
+
+Each algorithm has knobs — the marked item and number of Grover rounds (try
+3 to watch it overshoot), the Bernstein–Vazirani secret, the Deutsch–Jozsa
+oracle, the phase being estimated, the state to teleport.
+
+Both tabs run **entirely in the browser**: a small statevector engine in
+`frontend/src/quantum/`, three.js for the spheres, no network calls, no
+backend. They keep working with uvicorn stopped, and fall back to a flat SVG
+sphere on machines without WebGL. Adding a ninth algorithm is one file in
+`frontend/src/components/algorithms/library/`.
+
 ## Bring your own key
 
 Live mode no longer requires editing a file. Open **IBM credentials** on the
@@ -302,6 +348,7 @@ Every setting has a working default; `.env` is only needed to change one.
 
 ```bash
 ./.venv/bin/python -m pytest -q
+cd frontend && npm test        # quantum engine + every algorithm and challenge
 ```
 
 191 tests, a few seconds. They cover the claims this project makes rather than merely
@@ -324,6 +371,11 @@ exercising the code:
   WebSocket refuses it too, not just the REST API
 - `/api/health` stays reachable without a session, so the platform health check
   cannot restart the service in a loop
+
+The frontend suite (100 tests) runs every algorithm under every knob setting
+and checks it produces its advertised answer, checks the QFT against its
+textbook definition, checks every gate's sphere rotation against the matrix
+maths, and proves each Bloch Lab challenge is solvable within its budget.
 
 ---
 
@@ -442,6 +494,11 @@ frontend/src/
   components/             QPUCard, QueueChart, JobStream, ModeToggle,
                           FleetSummary, Recommender, ViewToggle
   components/playground/  CircuitGrid, GatePalette, ResultsHistogram
+  components/bloch/       Bloch Lab: 3D sphere (+ SVG fallback), gates,
+                          inspector, measurement, decoherence, challenges
+  components/algorithms/  step-through debugger; library/ holds one file
+                          per algorithm
+  quantum/                in-browser statevector + Bloch geometry, tested
   components/CredentialsCard.jsx   bring-your-own-key form
   components/LoginScreen.jsx       the sign-in gate
 docs/architecture.md      design rationale

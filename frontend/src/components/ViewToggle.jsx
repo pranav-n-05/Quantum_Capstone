@@ -1,12 +1,14 @@
-import { Gauge, CircuitBoard } from 'lucide-react'
+import { Gauge, CircuitBoard, Orbit, Route } from 'lucide-react'
 
 const OPTIONS = [
   { value: 'dashboard', label: 'Dashboard', icon: Gauge, title: 'Live fleet telemetry' },
   { value: 'playground', label: 'Playground', icon: CircuitBoard, title: 'Build and run a circuit' },
+  { value: 'bloch', label: 'Bloch Lab', icon: Orbit, title: 'Explore a single qubit on the Bloch sphere' },
+  { value: 'algorithms', label: 'Algorithms', icon: Route, title: 'Step through quantum algorithms gate by gate' },
 ]
 
 /**
- * Switches between the two halves of the app.
+ * Switches between the app's views.
  *
  * Shaped like {@link ThemeToggle} and {@link ModeToggle} on purpose -- the
  * header is one instrument strip and a third control with its own styling

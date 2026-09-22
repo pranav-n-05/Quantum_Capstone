@@ -1,0 +1,180 @@
+import { describe, expect, it } from 'vitest'
+
+import { applyUnitary, fidelity, fromAmplitudes, fromAngles, KET, relax, rotationOf, toAmplitudes } from './bloch'
+import { CHALLENGES } from '../components/bloch/challenges'
+import { axisRotation, MATRICES, rx, ry, rz, u } from './gates'
+import { applyOps, blochVector, probabilities, vectorLength, zeroState } from './statevector'
+import { marginal, runSteps } from './run'
+import { ALGORITHMS, defaultParams } from '../components/algorithms/library'
+
+const close = (a, b, eps = 1e-9) => expect(Math.abs(a - b)).toBeLessThan(eps)
+const closeVec = (a, b, eps = 1e-9) => {
+  close(a.x, b.x, eps)
+  close(a.y, b.y, eps)
+  close(a.z, b.z, eps)
+}
+
+describe('statevector', () => {
+  it('H on |0⟩ gives an equal superposition', () => {
+    const s = applyOps(zeroState(1), [{ g: 'h', t: [0] }])
+    const p = probabilities(s)
+    close(p[0], 0.5)
+    close(p[1], 0.5)
+  })
+
+  it('qubit 0 is the least-significant bit', () => {
+    const s = applyOps(zeroState(3), [{ g: 'x', t: [0] }])
+    close(probabilities(s)[1], 1) // |001⟩
+  })
+
+  it('preserves the norm through a random-ish circuit', () => {
+    const s = applyOps(zeroState(3), [
+      { g: 'h', t: [0] },
+      { g: 'ry', t: [1], angle: 1.1 },
+      { g: 'cx', c: [0], t: [2] },
+      { g: 'cp', c: [1], t: [0], angle: 0.7 },
+      { g: 'cz', c: [0, 1], t: [2] },
+      { g: 'swap', t: [0, 2] },
+      { g: 'u', t: [1], params: [0.3, 1.2, -0.4] },
+    ])
+    close(probabilities(s).reduce((a, b) => a + b, 0), 1)
+  })
+
+  it('reduced Bloch vectors of a Bell pair are zero (maximally entangled)', () => {
+    const s = applyOps(zeroState(2), [{ g: 'h', t: [0] }, { g: 'cx', c: [0], t: [1] }])
+    close(vectorLength(blochVector(s, 0)), 0)
+    close(vectorLength(blochVector(s, 1)), 0)
+  })
+
+  it('reduced Bloch vector matches the single-qubit picture for product states', () => {
+    const s = applyOps(zeroState(2), [{ g: 'h', t: [1] }, { g: 's', t: [1] }])
+    closeVec(blochVector(s, 1), KET.plusI)
+    closeVec(blochVector(s, 0), KET.zero)
+  })
+})
+
+describe('bloch geometry', () => {
+  const gates = {
+    x: MATRICES.x,
+    y: MATRICES.y,
+    z: MATRICES.z,
+    h: MATRICES.h,
+    s: MATRICES.s,
+    t: MATRICES.t,
+    rx: rx(0.7),
+    ry: ry(-1.3),
+    rz: rz(2.2),
+    u: u(0.4, 1.9, -0.6),
+    axis: axisRotation([0.6, 0, 0.8], 1.0),
+  }
+  const starts = [KET.zero, KET.plus, fromAngles(1.0, 2.0), fromAngles(2.5, -0.8)]
+
+  for (const [name, U] of Object.entries(gates)) {
+    it(`rotationOf(${name}) agrees with applying the matrix to amplitudes`, () => {
+      for (const v of starts) {
+        const [a, b] = toAmplitudes(v)
+        const mulc = (m, z) => ({ re: m.re * z.re - m.im * z.im, im: m.re * z.im + m.im * z.re })
+        const addc = (p, q) => ({ re: p.re + q.re, im: p.im + q.im })
+        const a2 = addc(mulc(U[0][0], a), mulc(U[0][1], b))
+        const b2 = addc(mulc(U[1][0], a), mulc(U[1][1], b))
+        closeVec(applyUnitary(v, U), fromAmplitudes([a2, b2]), 1e-9)
+      }
+    })
+  }
+
+  it('X is a half-turn about x̂', () => {
+    const { axis, angle } = rotationOf(MATRICES.x)
+    close(Math.abs(angle), Math.PI)
+    close(Math.abs(axis[0]), 1)
+  })
+
+  it('T1/T2 relaxation pulls |1⟩ toward |0⟩ and shrinks the equator', () => {
+    const r = relax(KET.plus, { t1: 100, t2: 50 }, 50)
+    close(r.x, Math.exp(-1))
+    close(r.z, 1 - Math.exp(-0.5))
+  })
+})
+
+describe('algorithm library', () => {
+  for (const algorithm of ALGORITHMS) {
+    // Exercise every option of every knob, not just the defaults.
+    const combos = algorithm.params.reduce(
+      (acc, p) => acc.flatMap((c) => p.options.map((o) => ({ ...c, [p.key]: o.value }))),
+      [{}],
+    )
+
+    for (const params of combos) {
+      it(`${algorithm.id} ${JSON.stringify(params)} gives its advertised answer`, () => {
+        const built = algorithm.build({ ...defaultParams(algorithm), ...params })
+        const states = runSteps(built.qubits, built.steps)
+        const final = states[states.length - 1]
+        const dist = marginal(final, built.readout)
+        const { answer } = built
+
+        if (answer.bits && answer.exact !== false) {
+          const hit = answer.bits.reduce((sum, b) => sum + (dist[b] ?? 0), 0)
+          if (algorithm.id === 'grover') {
+            const expected = { 1: 0.78125, 2: 0.9453125, 3: 0.330078125, 4: 0.01220703125 }[params.iterations]
+            close(hit, expected, 1e-6)
+          } else {
+            close(hit, 1, 1e-9)
+          }
+        }
+        if (answer.bits && answer.exact === false) {
+          const best = Object.entries(dist).sort((a, b) => b[1] - a[1])[0][0]
+          expect(best).toBe(answer.bits[0])
+        }
+        if (answer.notBits) close(dist[answer.notBits[0]] ?? 0, 0)
+        if (built.target) {
+          closeVec(blochVector(final, built.target.qubit), fromAngles(built.target.theta, built.target.phi))
+        }
+      })
+    }
+  }
+
+  it('QFT matches the textbook definition', () => {
+    const qft = ALGORITHMS.find((a) => a.id === 'qft')
+    for (let x = 0; x < 8; x++) {
+      const built = qft.build({ input: String(x) })
+      const final = runSteps(built.qubits, built.steps).at(-1)
+      for (let y = 0; y < 8; y++) {
+        const angle = (2 * Math.PI * x * y) / 8
+        close(final.re[y], Math.cos(angle) / Math.sqrt(8))
+        close(final.im[y], Math.sin(angle) / Math.sqrt(8))
+      }
+    }
+  })
+})
+
+describe('grover display phase', () => {
+  it('after the optimal rounds the marked amplitude is positive, not just large', () => {
+    const grover = ALGORITHMS.find((a) => a.id === 'grover')
+    const built = grover.build({ marked: '110', iterations: '2' })
+    const final = runSteps(built.qubits, built.steps).at(-1)
+    expect(final.re[0b110]).toBeGreaterThan(0.9)
+  })
+})
+
+describe('bloch challenges', () => {
+  // A known solution for each challenge, within budget and allowed gates.
+  const SOLUTIONS = {
+    flip: [MATRICES.x],
+    plus: [MATRICES.h],
+    minus: [MATRICES.h, MATRICES.z],
+    plusI: [MATRICES.h, MATRICES.s],
+    'no-sdg': [MATRICES.h, MATRICES.s, MATRICES.z],
+    magic: [MATRICES.h, MATRICES.t],
+    home: [MATRICES.sdg, MATRICES.h],
+    tilt: [ry(Math.PI / 3)],
+    side: [rx((-2 * Math.PI) / 3)],
+    universal: [u((3 * Math.PI) / 4, -Math.PI / 3, 0)],
+  }
+  for (const challenge of CHALLENGES) {
+    it(`"${challenge.title}" is solvable within its budget`, () => {
+      const path = SOLUTIONS[challenge.id]
+      expect(path.length).toBeLessThanOrEqual(challenge.budget)
+      const end = path.reduce((v, U) => applyUnitary(v, U), challenge.start ?? KET.zero)
+      expect(fidelity(end, challenge.target)).toBeGreaterThan(0.9999)
+    })
+  }
+})

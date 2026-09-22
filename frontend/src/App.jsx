@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { Atom, AlertTriangle, X, FlaskConical, LogOut, WifiOff } from 'lucide-react'
 
 import { useQuantumTelemetry } from './hooks/useQuantumTelemetry'
@@ -14,6 +14,18 @@ import ThemeToggle from './components/ThemeToggle'
 import ViewToggle from './components/ViewToggle'
 import CredentialsCard from './components/CredentialsCard'
 import Playground from './components/playground/Playground'
+import ErrorBoundary from './components/ErrorBoundary'
+
+// three.js is only needed by these two views, so they load on first visit
+// and the dashboard's own bundle stays as small as it was.
+const BlochLab = lazy(() => import('./components/bloch/BlochLab'))
+const AlgorithmsView = lazy(() => import('./components/algorithms/AlgorithmsView'))
+
+const SUBTITLES = {
+  playground: 'Build a circuit and run it through a QPU noise model',
+  bloch: 'One qubit, every gate as a rotation — measure it, let it decohere, solve challenges',
+  algorithms: 'Eight algorithms as a step-through debugger — watch amplitudes, phases and entanglement change',
+}
 
 function Dashboard({ authEnabled, onSignOut, onAuthLost }) {
   const { snapshot, chartData, connectionState, error, isLoading } = useQuantumTelemetry()
@@ -41,32 +53,6 @@ function Dashboard({ authEnabled, onSignOut, onAuthLost }) {
     [snapshot],
   )
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="flex items-center gap-3 text-sm text-slate-500">
-          <Atom size={18} className="animate-spin text-signal-cyan" />
-          Connecting to telemetry service…
-        </div>
-      </div>
-    )
-  }
-
-  if (error && !snapshot) {
-    return (
-      <div className="flex min-h-screen items-center justify-center px-6">
-        <div className="panel max-w-md px-6 py-5 text-center">
-          <WifiOff size={22} className="mx-auto text-signal-rose" />
-          <h1 className="mt-3 text-sm font-medium text-slate-200">Dashboard API unreachable</h1>
-          <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{error}</p>
-          <p className="mt-3 rounded-md bg-lab-850 px-3 py-2 text-left font-mono text-[11px] text-slate-400">
-            uvicorn backend.main:app --reload --port 8000
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   const { backends = [], jobs = [], summary, recommendations = [], source } = snapshot ?? {}
 
   return (
@@ -83,11 +69,10 @@ function Dashboard({ authEnabled, onSignOut, onAuthLost }) {
                 IBM Quantum · Live Telemetry
               </h1>
               <p className="text-[11px] text-slate-500">
-                {view === 'playground'
-                  ? 'Build a circuit and run it through a QPU noise model'
-                  : `Fleet queue depth, device status and job flow, refreshed every ${
-                      snapshot?.poll_interval_seconds ?? 12
-                    }s`}
+                {SUBTITLES[view] ??
+                  `Fleet queue depth, device status and job flow, refreshed every ${
+                    snapshot?.poll_interval_seconds ?? 12
+                  }s`}
               </p>
             </div>
           </div>
@@ -159,7 +144,57 @@ function Dashboard({ authEnabled, onSignOut, onAuthLost }) {
             you are choosing a device to submit to. */}
         {view === 'playground' && <Playground backends={backends} />}
 
-        {view === 'dashboard' && (
+        {(view === 'bloch' || view === 'algorithms') && (
+          <Suspense
+            fallback={
+              <div className="flex items-center gap-3 py-16 text-sm text-slate-500">
+                <Atom size={18} className="animate-spin text-signal-cyan" />
+                Loading the 3D lab…
+              </div>
+            }
+          >
+            <ErrorBoundary
+              resetKey={view}
+              fallback={(caught) => (
+                <div className="panel mx-auto max-w-md px-6 py-5 text-center">
+                  <AlertTriangle size={20} className="mx-auto text-signal-amber" />
+                  <p className="mt-2 text-sm text-slate-200">This view hit an error</p>
+                  <p className="mt-1 break-words font-mono text-[11px] text-slate-500">{caught.message}</p>
+                </div>
+              )}
+            >
+              {view === 'bloch' ? <BlochLab /> : <AlgorithmsView />}
+            </ErrorBoundary>
+          </Suspense>
+        )}
+
+        {/* Loading and "API unreachable" belong to the telemetry views only:
+            the Bloch Lab and Algorithms run entirely in the browser, so the
+            header -- and the way to reach them -- has to survive a dead backend. */}
+        {view === 'dashboard' && isLoading && (
+          <div className="flex items-center justify-center gap-3 py-24 text-sm text-slate-500">
+            <Atom size={18} className="animate-spin text-signal-cyan" />
+            Connecting to telemetry service…
+          </div>
+        )}
+
+        {view === 'dashboard' && !isLoading && error && !snapshot && (
+          <div className="flex justify-center py-16">
+            <div className="panel max-w-md px-6 py-5 text-center">
+              <WifiOff size={22} className="mx-auto text-signal-rose" />
+              <h2 className="mt-3 text-sm font-medium text-slate-200">Dashboard API unreachable</h2>
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{error}</p>
+              <p className="mt-3 rounded-md bg-lab-850 px-3 py-2 text-left font-mono text-[11px] text-slate-400">
+                uvicorn backend.main:app --reload --port 8000
+              </p>
+              <p className="mt-3 text-[11px] text-slate-500">
+                The Bloch Lab and Algorithms views work without it.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {view === 'dashboard' && snapshot && (
           <>
             <CredentialsCard source={source} />
 
