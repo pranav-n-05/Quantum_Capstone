@@ -11,20 +11,40 @@ import {
 } from 'recharts'
 import { TrendingUp } from 'lucide-react'
 
-// Categorical palette. Each series is also given a distinct dash pattern below,
-// so the chart stays readable for viewers who cannot separate these by hue.
-const SERIES = [
-  { colour: '#22d3ee', dash: '0' },
-  { colour: '#a78bfa', dash: '6 3' },
-  { colour: '#34d399', dash: '2 3' },
-  { colour: '#fbbf24', dash: '8 3 2 3' },
-  { colour: '#fb7185', dash: '4 4' },
-]
+import { useTheme } from '../hooks/useTheme'
+
+// Each series also carries a distinct dash pattern, so the chart stays
+// readable for viewers who cannot separate these by hue.
+const DASHES = ['0', '6 3', '2 3', '8 3 2 3', '4 4']
+
+// Recharts renders to SVG attributes rather than classes, so it cannot pick up
+// the CSS variables the rest of the dashboard themes through -- these two
+// palettes are the same tokens, resolved in JS. The light series colours are
+// darkened: the dark palette's neons vanish against white.
+const CHART_THEME = {
+  dark: {
+    grid: '#1e293f',
+    axis: '#475569',
+    surface: '#0a0e1a',
+    label: '#e2e8f0',
+    series: ['#22d3ee', '#a78bfa', '#34d399', '#fbbf24', '#fb7185'],
+  },
+  light: {
+    grid: '#dbe3ee',
+    axis: '#64748b',
+    surface: '#ffffff',
+    label: '#1b2434',
+    series: ['#0885a3', '#6d28d9', '#047857', '#b45309', '#d61942'],
+  },
+}
 
 const formatClock = (ms) =>
   new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
 export default function QueueChart({ chartData, backends }) {
+  const { resolvedTheme } = useTheme()
+  const palette = CHART_THEME[resolvedTheme] ?? CHART_THEME.dark
+
   // Plot the five busiest operational machines. Eighteen lines is not a chart,
   // it is a plate of spaghetti.
   const tracked = useMemo(
@@ -57,21 +77,21 @@ export default function QueueChart({ chartData, backends }) {
         ) : (
           <ResponsiveContainer width="100%" height="100%" minHeight={240}>
             <LineChart data={chartData} margin={{ top: 4, right: 12, bottom: 0, left: -18 }}>
-              <CartesianGrid strokeDasharray="2 4" stroke="#1e293f" vertical={false} />
+              <CartesianGrid strokeDasharray="2 4" stroke={palette.grid} vertical={false} />
               <XAxis
                 dataKey="t"
                 type="number"
                 scale="time"
                 domain={['dataMin', 'dataMax']}
                 tickFormatter={formatClock}
-                stroke="#475569"
+                stroke={palette.axis}
                 tick={{ fontSize: 10 }}
                 tickLine={false}
-                axisLine={{ stroke: '#1e293f' }}
+                axisLine={{ stroke: palette.grid }}
                 minTickGap={44}
               />
               <YAxis
-                stroke="#475569"
+                stroke={palette.axis}
                 tick={{ fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
@@ -80,11 +100,12 @@ export default function QueueChart({ chartData, backends }) {
               />
               <Tooltip
                 contentStyle={{
-                  background: '#0a0e1a',
-                  border: '1px solid #1e293f',
+                  background: palette.surface,
+                  border: `1px solid ${palette.grid}`,
                   borderRadius: 8,
                   fontSize: 12,
                 }}
+                labelStyle={{ color: palette.label }}
                 labelFormatter={(value) => new Date(value).toLocaleTimeString()}
                 itemStyle={{ padding: '1px 0' }}
               />
@@ -94,7 +115,8 @@ export default function QueueChart({ chartData, backends }) {
                 iconSize={14}
               />
               {tracked.map((name, index) => {
-                const { colour, dash } = SERIES[index % SERIES.length]
+                const colour = palette.series[index % palette.series.length]
+                const dash = DASHES[index % DASHES.length]
                 return (
                   <Line
                     key={name}

@@ -51,6 +51,22 @@ class Settings(BaseSettings):
     history_retention_days: int = 7
 
     # --- Serving ------------------------------------------------------------
+    admin_password: str = Field(
+        default="",
+        description=(
+            "Shared password gating the dashboard. Blank disables authentication "
+            "entirely, which is correct on localhost and wrong on a public URL."
+        ),
+    )
+    session_secret: str = Field(
+        default="",
+        description=(
+            "HMAC key for session cookies. Blank generates a random one per "
+            "process, so sessions do not survive a restart. Pin it to keep them."
+        ),
+    )
+    session_hours: int = Field(default=12, ge=1, le=720)
+
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     @field_validator("poll_interval_seconds")
@@ -77,6 +93,11 @@ class Settings(BaseSettings):
     @property
     def live_mode_possible(self) -> bool:
         return self.has_credentials and not self.force_mock_mode
+
+    @property
+    def auth_enabled(self) -> bool:
+        """Whether a password has been configured at all."""
+        return bool(self.admin_password.strip())
 
     @property
     def cors_origin_list(self) -> list[str]:

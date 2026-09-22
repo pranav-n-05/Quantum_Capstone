@@ -5,6 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>IBM Quantum · Live Telemetry</title>
     <meta name="description" content="Real-time queue, status and job telemetry for the IBM Quantum QPU fleet." />
+    <script>
+      // Resolve the theme before first paint. React mounts a frame or two
+      // later, and a flash of the wrong theme is far more jarring than a few
+      // lines of inline script. Must agree with src/hooks/useTheme.jsx: no
+      // stored value means "follow the system".
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('qtd-theme')
+          var theme =
+            stored === 'light' || stored === 'dark'
+              ? stored
+              : window.matchMedia('(prefers-color-scheme: light)').matches
+                ? 'light'
+                : 'dark'
+          var root = document.documentElement
+          root.classList.toggle('light', theme === 'light')
+          root.classList.toggle('dark', theme === 'dark')
+          root.style.colorScheme = theme
+        } catch (error) {
+          /* Keep the dark class already on <html>. */
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

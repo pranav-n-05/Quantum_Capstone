@@ -104,6 +104,44 @@ class TelemetryPoller:
             self._settings.poll_interval_seconds,
         )
 
+    async def rebuild_client(self) -> None:
+        """Adopt the settings' current credentials without a restart.
+
+        The poller builds its IBM client once, at construction, from the
+        credentials that existed then. When they are supplied through the UI
+        instead, that client is either absent or pointed at the wrong account,
+        so it has to be replaced in place.
+
+        Clearing the auth latch is the important part. Once a key is rejected
+        the poller stops attempting live calls *forever* -- correct, because
+        retrying a bad credential just burns requests, but it must not outlive
+        the bad credential itself. New credentials are exactly the new
+        information that makes retrying worthwhile again.
+        """
+        old_client = self._client
+
+        if self._settings.live_mode_possible:
+            self._client = IBMQuantumClient(self._settings)
+        else:
+            self._client = None
+
+        self._auth_failed_permanently = False
+        self._latched_reason = None
+        self._store.consecutive_failures = 0
+
+        if old_client is not None:
+            try:
+                await old_client.aclose()
+            except Exception:  # noqa: BLE001 - a stale pool must not block the swap
+                logger.exception("Failed to close the previous IBM client.")
+
+        # Refresh immediately so the UI reflects the change on this tick rather
+        # than up to twelve seconds later.
+        await self.poll_once()
+        logger.info(
+            "Rebuilt IBM client; now in %s mode.", "LIVE" if self._client else "MOCK"
+        )
+
     async def stop(self) -> None:
         self._stop_event.set()
         if self._task is not None:

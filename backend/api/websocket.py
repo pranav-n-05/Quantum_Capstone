@@ -15,6 +15,7 @@ import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from ..core.auth import COOKIE_NAME
 from ..models import TelemetrySnapshot
 
 logger = logging.getLogger(__name__)
@@ -77,6 +78,18 @@ async def telemetry_socket(websocket: WebSocket) -> None:
     """Stream telemetry snapshots to a connected browser."""
     manager: ConnectionManager = websocket.app.state.connections
     store = websocket.app.state.store
+
+    # The session check has to happen here, not in the HTTP middleware: an
+    # upgrade request arrives with scope type "websocket" and never passes
+    # through it. Without this the socket would stream the whole fleet to
+    # anyone who asked, while every REST route sat safely behind a cookie.
+    sessions = getattr(websocket.app.state, "sessions", None)
+    if sessions is not None and sessions.enabled:
+        if not sessions.verify(websocket.cookies.get(COOKIE_NAME)):
+            # 1008 is "policy violation". Closing before accepting means an
+            # unauthenticated client never receives a single snapshot.
+            await websocket.close(code=1008, reason="Sign in to use this dashboard.")
+            return
 
     await manager.connect(websocket)
     try:

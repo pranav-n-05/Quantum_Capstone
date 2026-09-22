@@ -3,16 +3,88 @@
 @tailwind utilities;
 
 @layer base {
-  html {
+  /* ------------------------------------------------------------------ *
+   * Dark is the default, and also the fallback: if the theme script
+   * never runs, the dashboard still renders exactly as it always has.
+   * ------------------------------------------------------------------ */
+  :root {
     color-scheme: dark;
+
+    --lab-950: 5 7 13;
+    --lab-900: 10 14 26;
+    --lab-850: 15 21 36;
+    --lab-800: 20 28 46;
+    --lab-700: 30 41 63;
+    --lab-600: 44 58 85;
+
+    /* Text ramp, brightest first. 100 is a heading, 600 is a whisper. */
+    --slate-50: 248 250 252;
+    --slate-100: 241 245 249;
+    --slate-200: 226 232 240;
+    --slate-300: 203 213 225;
+    --slate-400: 148 163 184;
+    --slate-500: 100 116 139;
+    --slate-600: 71 85 105;
+    --slate-700: 51 65 85;
+    --slate-800: 30 41 59;
+    --slate-900: 15 23 42;
+    --slate-950: 2 6 23;
+
+    --signal-cyan: 34 211 238;
+    --signal-violet: 167 139 250;
+    --signal-amber: 251 191 36;
+    --signal-green: 52 211 153;
+    --signal-rose: 251 113 133;
+
+    --page-glow-a: rgba(34, 211, 238, 0.07);
+    --page-glow-b: rgba(167, 139, 250, 0.06);
   }
+
+  /* ------------------------------------------------------------------ *
+   * Light theme. Surfaces invert and the text ramp reverses, so every
+   * token keeps its role: lab-950 is still "the page", slate-100 is
+   * still "the loudest text", signal-cyan is still "live". The accents
+   * are darkened rather than reused -- #22d3ee on white is unreadable.
+   * ------------------------------------------------------------------ */
+  :root.light {
+    color-scheme: light;
+
+    --lab-950: 244 247 252;
+    --lab-900: 255 255 255;
+    --lab-850: 237 242 249;
+    --lab-800: 228 234 243;
+    --lab-700: 209 217 230;
+    --lab-600: 172 185 205;
+
+    --slate-50: 2 6 23;
+    --slate-100: 13 20 33;
+    --slate-200: 27 36 52;
+    --slate-300: 43 54 72;
+    --slate-400: 65 79 99;
+    --slate-500: 85 99 119;
+    --slate-600: 100 116 139;
+    --slate-700: 148 163 184;
+    --slate-800: 203 213 225;
+    --slate-900: 226 232 240;
+    --slate-950: 241 245 249;
+
+    --signal-cyan: 8 133 163;
+    --signal-violet: 109 40 217;
+    --signal-amber: 180 83 9;
+    --signal-green: 4 120 87;
+    --signal-rose: 214 25 66;
+
+    --page-glow-a: rgba(8, 145, 178, 0.1);
+    --page-glow-b: rgba(124, 58, 237, 0.08);
+  }
+
   body {
     @apply bg-lab-950 text-slate-200 antialiased;
     /* A faint dual-glow behind the page: the instrument-panel feel comes from
        light falling off into black, not from flat fills. */
     background-image:
-      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(34, 211, 238, 0.07), transparent),
-      radial-gradient(ellipse 60% 50% at 90% 0%, rgba(167, 139, 250, 0.06), transparent);
+      radial-gradient(ellipse 80% 50% at 20% -10%, var(--page-glow-a), transparent),
+      radial-gradient(ellipse 60% 50% at 90% 0%, var(--page-glow-b), transparent);
     background-attachment: fixed;
   }
   ::-webkit-scrollbar {
@@ -27,6 +99,22 @@
   }
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-lab-600;
+  }
+
+  /* Cross-fade the repaint instead of hard-cutting it. The class is added
+     only for the length of a switch, so hover states elsewhere keep their
+     own (faster) timings the rest of the time. */
+  @media (prefers-reduced-motion: no-preference) {
+    :root.theme-switching,
+    :root.theme-switching *,
+    :root.theme-switching *::before,
+    :root.theme-switching *::after {
+      transition:
+        background-color 220ms ease,
+        border-color 220ms ease,
+        color 220ms ease,
+        fill 220ms ease !important;
+    }
   }
 }
 

@@ -23,11 +23,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from pathlib import Path
 
-from .api import rest, websocket
+from fastapi.responses import JSONResponse
+
+from .api import auth as auth_routes, rest, websocket
 from .api.websocket import ConnectionManager
 from .config import get_settings
 from .core.cache import TelemetryStore
 from .core.history import HistoryStore
+from .core.auth import COOKIE_NAME, SessionManager
+from .core.credentials import CredentialStore
 from .core.poller import TelemetryPoller
 from .static import mount_frontend
 
@@ -69,6 +73,21 @@ async def lifespan(app: FastAPI):
     app.state.connections = connections
     app.state.history = history
     app.state.poller = poller
+    app.state.credentials = CredentialStore(settings)
+    app.state.sessions = SessionManager(
+        password=settings.admin_password,
+        secret=settings.session_secret,
+        session_hours=settings.session_hours,
+    )
+
+    if settings.auth_enabled:
+        logger.info("Authentication is ON -- a password is required.")
+    else:
+        logger.warning(
+            "Authentication is OFF: anyone who can reach this server can use it "
+            "and can set IBM credentials on it. Set ADMIN_PASSWORD before "
+            "exposing it beyond localhost."
+        )
 
     if settings.live_mode_possible:
         logger.info("Credentials detected -- attempting LIVE IBM Quantum telemetry.")
@@ -102,10 +121,49 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=get_settings().cors_origin_list,
     allow_credentials=True,
-    allow_methods=["GET"],
+    # GET for telemetry, POST for the playground. Still an explicit list rather
+    # than ["*"]: nothing here should ever be reachable by PUT or DELETE.
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
+#: Reachable without a session. /api/health stays open because a platform
+#: health check arrives with no cookie, and a service that fails its health
+#: check gets restarted in a loop.
+_PUBLIC_API_PATHS = frozenset(
+    {"/api/health", "/api/auth/login", "/api/auth/logout", "/api/auth/status"}
+)
+
+
+@app.middleware("http")
+async def require_session(request, call_next):
+    """Gate the API behind a session cookie when a password is configured.
+
+    Only /api and /ws are gated. The static bundle is served to anyone, because
+    the login screen *is* the React app -- protecting it would leave nothing to
+    log in with. Nothing sensitive lives in the bundle; the data it renders is
+    all behind these checks.
+    """
+    sessions = getattr(request.app.state, "sessions", None)
+    path = request.url.path
+
+    needs_session = (
+        sessions is not None
+        and sessions.enabled
+        and (path.startswith("/api") or path.startswith("/ws"))
+        and path not in _PUBLIC_API_PATHS
+    )
+
+    if needs_session and not sessions.verify(request.cookies.get(COOKIE_NAME)):
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Sign in to use this dashboard."},
+        )
+
+    return await call_next(request)
+
+
+app.include_router(auth_routes.router)
 app.include_router(rest.router)
 app.include_router(websocket.router)
 

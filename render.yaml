@@ -18,6 +18,15 @@ services:
         sync: false
       - key: IBM_QUANTUM_CRN
         sync: false
+      # Set this in the Render dashboard before the service is public. Without
+      # it the dashboard, and the form that accepts IBM credentials, are open
+      # to anyone who has the URL.
+      - key: ADMIN_PASSWORD
+        sync: false
+      # generateValue gives a strong random key that survives redeploys, so a
+      # deploy does not sign everyone out.
+      - key: SESSION_SECRET
+        generateValue: true
       - key: POLL_INTERVAL_SECONDS
         value: "12"
       - key: ENABLE_HISTORY

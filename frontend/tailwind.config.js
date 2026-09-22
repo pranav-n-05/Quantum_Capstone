@@ -1,25 +1,31 @@
 /** @type {import('tailwindcss').Config} */
+
+// Every colour resolves through a CSS variable holding space-separated RGB
+// channels, so `<alpha-value>` keeps working for utilities like
+// `bg-signal-amber/10`. The variables themselves are defined per theme in
+// src/index.css -- swapping the class on <html> repaints the whole dashboard
+// without a single `dark:` variant in the components.
+const token = (name) => `rgb(var(--${name}) / <alpha-value>)`
+const scale = (prefix, stops) =>
+  Object.fromEntries(stops.map((stop) => [stop, token(`${prefix}-${stop}`)]))
+
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
         // A cold, instrument-panel palette: near-black slate carrying cyan for
-        // live signal and amber for degraded state.
-        lab: {
-          950: '#05070d',
-          900: '#0a0e1a',
-          850: '#0f1524',
-          800: '#141c2e',
-          700: '#1e293f',
-          600: '#2c3a55',
-        },
+        // live signal and amber for degraded state. In the light theme the
+        // ramp inverts -- the same names keep the same *role*.
+        lab: scale('lab', [950, 900, 850, 800, 700, 600]),
+        slate: scale('slate', [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]),
         signal: {
-          cyan: '#22d3ee',
-          violet: '#a78bfa',
-          amber: '#fbbf24',
-          green: '#34d399',
-          rose: '#fb7185',
+          cyan: token('signal-cyan'),
+          violet: token('signal-violet'),
+          amber: token('signal-amber'),
+          green: token('signal-green'),
+          rose: token('signal-rose'),
         },
       },
       fontFamily: {
