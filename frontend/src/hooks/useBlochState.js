@@ -33,7 +33,8 @@ export function useBlochState(start = KET.zero) {
   const animate = useCallback((from, to, rot) => {
     cancelAnimationFrame(frame.current)
     const angle = rot ? Math.abs(rot.angle) : 0
-    const duration = prefersReducedMotion() ? 0 : rot ? 280 + 420 * (angle / Math.PI) : 520
+    // Capped so a many-turn pulse still finishes in a couple of seconds.
+    const duration = prefersReducedMotion() ? 0 : rot ? Math.min(2400, 280 + 420 * (angle / Math.PI)) : 520
     if (duration === 0) {
       setDisplay(to)
       setTrail((t) => [...t, to].slice(-TRAIL_LIMIT))
@@ -74,6 +75,19 @@ export function useBlochState(start = KET.zero) {
       const rot = rotationOf(U)
       const next = rotate(vec, rot.axis, rot.angle)
       push({ label, kind: 'gate', vec: next, rot }, rot)
+    },
+    [vec, push],
+  )
+
+  /**
+   * Rotate by an explicit axis and angle, keeping every turn. A long drive
+   * pulse can wind the state round several times; folding that into one 2×2
+   * unitary would animate only the net short-way rotation.
+   */
+  const applyRotation = useCallback(
+    (label, axis, angle) => {
+      const rot = { axis, angle }
+      push({ label, kind: 'gate', vec: rotate(vec, axis, angle), rot }, rot)
     },
     [vec, push],
   )
@@ -119,6 +133,7 @@ export function useBlochState(start = KET.zero) {
     canUndo: cursor > 0,
     canRedo: cursor < timeline.length - 1,
     applyGate,
+    applyRotation,
     setVector,
     undo,
     redo,

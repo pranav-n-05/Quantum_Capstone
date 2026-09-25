@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { applyUnitary, fidelity, fromAmplitudes, fromAngles, KET, relax, rotationOf, toAmplitudes } from './bloch'
+import { applyUnitary, drive, driveUnitary, fidelity, fromAmplitudes, fromAngles, KET, relax, rotationOf, toAmplitudes } from './bloch'
 import { CHALLENGES } from '../components/bloch/challenges'
 import { axisRotation, MATRICES, rx, ry, rz, u } from './gates'
 import { applyOps, blochVector, probabilities, vectorLength, zeroState } from './statevector'
@@ -177,4 +177,44 @@ describe('bloch challenges', () => {
       expect(fidelity(end, challenge.target)).toBeGreaterThan(0.9999)
     })
   }
+})
+
+describe('rabi drive', () => {
+  const close = (a, b) => {
+    expect(a.x).toBeCloseTo(b.x, 6)
+    expect(a.y).toBeCloseTo(b.y, 6)
+    expect(a.z).toBeCloseTo(b.z, 6)
+  }
+
+  it('flips |0⟩ to |1⟩ with an on-resonance π-pulse', () => {
+    close(drive(KET.zero, { rabi: 10, detuning: 0, phase: 0 }, 50), KET.one)
+  })
+
+  it('a φ = 0 drive is an Rx rotation', () => {
+    const d = { rabi: 5, detuning: 0, phase: 0 }
+    close(applyUnitary(KET.zero, driveUnitary(d, 50)), applyUnitary(KET.zero, rx(Math.PI / 2)))
+  })
+
+  it('a φ = 90° drive is an Ry rotation', () => {
+    const d = { rabi: 5, detuning: 0, phase: Math.PI / 2 }
+    close(applyUnitary(KET.zero, driveUnitary(d, 50)), applyUnitary(KET.zero, ry(Math.PI / 2)))
+  })
+
+  it('unitary and closed-form paths agree for a detuned drive', () => {
+    const d = { rabi: 7, detuning: 3, phase: 0.4 }
+    const v = { x: 0.3, y: -0.5, z: 0.81 }
+    close(applyUnitary(v, driveUnitary(d, 37)), drive(v, d, 37))
+  })
+
+  it('detuning caps the population transfer at Ω²/(Ω² + Δ²)', () => {
+    const d = { rabi: 4, detuning: 3, phase: 0 }
+    // Half a period at Ω_eff = 5 MHz is 100 ns: the point of maximum transfer.
+    const p1 = (1 - drive(KET.zero, d, 100).z) / 2
+    expect(p1).toBeCloseTo(16 / 25, 6)
+  })
+
+  it('pure detuning only precesses about z', () => {
+    const v = drive(KET.plus, { rabi: 0, detuning: 2.5, phase: 0 }, 100)
+    close(v, KET.plusI)
+  })
 })

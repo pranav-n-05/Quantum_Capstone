@@ -184,7 +184,7 @@ export default function BlochSphere3D({
           frameloop="demand"
           dpr={[1, 2]}
           camera={{ position: compact ? [2.5, 1.75, 3.2] : [2.2, 1.45, 2.7], fov: compact ? 38 : 40 }}
-          gl={{ antialias: true, alpha: true }}
+          gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
         >
           <Scene vector={vector} ghost={ghost} trail={trail} labels={labels} colors={colors} accent={accent} ghostColor={colors[ghostAccent]} compact={compact} />
           {interactive && <OrbitControls enablePan={false} enableZoom={false} rotateSpeed={0.6} />}

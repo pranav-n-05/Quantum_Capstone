@@ -123,3 +123,33 @@ export function relax(v, { t1, t2 }, t) {
 
 /** Probability of measuring 0. */
 export const p0 = (v) => (1 + v.z) / 2
+
+/**
+ * A resonant microwave drive, in the frame rotating with the qubit.
+ * H = ½(Δ σz + Ω(cos φ σx + sin φ σy)) with Ω, Δ in MHz, so the state
+ * precesses about n̂ = (Ω cos φ, Ω sin φ, Δ)/Ω_eff at Ω_eff = √(Ω² + Δ²).
+ * On resonance (Δ = 0) a pulse of length 1/(2Ω) is a π-pulse: a full flip.
+ */
+export function driveAxis({ rabi, detuning, phase }) {
+  const eff = Math.hypot(rabi, detuning)
+  if (eff < 1e-12) return { axis: [0, 0, 1], eff: 0 }
+  return { axis: [(rabi * Math.cos(phase)) / eff, (rabi * Math.sin(phase)) / eff, detuning / eff], eff }
+}
+
+/** Rotation angle, in radians, a drive of `ns` nanoseconds produces. */
+export const driveAngle = (drive, ns) => (2 * Math.PI * driveAxis(drive).eff * ns) / 1000
+
+/** The drive as a 2×2 unitary exp(−i·angle·n̂·σ/2), for the gate pipeline. */
+export function driveUnitary(drive, ns) {
+  const { axis: [nx, ny, nz] } = driveAxis(drive)
+  const half = driveAngle(drive, ns) / 2
+  const cs = Math.cos(half)
+  const sn = Math.sin(half)
+  return [
+    [c(cs, -sn * nz), c(-sn * ny, -sn * nx)],
+    [c(sn * ny, -sn * nx), c(cs, sn * nz)],
+  ]
+}
+
+/** State after driving `v` for `ns` nanoseconds (exact, any number of turns). */
+export const drive = (v, d, ns) => rotate(v, driveAxis(d).axis, driveAngle(d, ns))

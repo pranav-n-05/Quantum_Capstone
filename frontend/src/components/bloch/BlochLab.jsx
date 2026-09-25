@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Eraser, Orbit, Redo2, RotateCcw, Undo2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Camera, Eraser, Orbit, Redo2, RotateCcw, Undo2 } from 'lucide-react'
 
 import { useBlochState } from '../../hooks/useBlochState'
 import { fidelity, KET } from '../../quantum/bloch'
@@ -8,6 +8,7 @@ import ChallengePanel from './ChallengePanel'
 import DecoherencePanel from './DecoherencePanel'
 import GatePad from './GatePad'
 import MeasurePanel from './MeasurePanel'
+import PulsePanel from './PulsePanel'
 import StateInspector from './StateInspector'
 import { SOLVED_KEY } from './challenges'
 import { Panel } from './ui'
@@ -18,6 +19,51 @@ function readSolved() {
   } catch {
     return new Set()
   }
+}
+
+/**
+ * Save what the sphere shows as a PNG. The WebGL canvas is transparent, so it
+ * is laid over the panel background; the SVG fallback is rasterised the same
+ * way. Axis labels are HTML overlays and are not part of the image.
+ */
+async function saveSnapshot(container) {
+  const bg = getComputedStyle(container).backgroundColor || '#0a0e1a'
+  const src = container.querySelector('canvas')
+  let image = src
+  let w = src?.width
+  let h = src?.height
+  if (!src) {
+    const svg = container.querySelector('svg')
+    if (!svg) return
+    const box = svg.getBoundingClientRect()
+    w = Math.round(box.width * 2)
+    h = Math.round(box.height * 2)
+    // Without explicit dimensions the browser rasterises at its default size
+    // and the sphere comes out squashed.
+    const copy = svg.cloneNode(true)
+    copy.setAttribute('width', w)
+    copy.setAttribute('height', h)
+    copy.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(copy)], { type: 'image/svg+xml' }))
+    image = await new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => resolve(img)
+      img.onerror = reject
+      img.src = url
+    })
+    URL.revokeObjectURL(url)
+  }
+  const out = document.createElement('canvas')
+  out.width = w
+  out.height = h
+  const ctx = out.getContext('2d')
+  ctx.fillStyle = bg
+  ctx.fillRect(0, 0, w, h)
+  ctx.drawImage(image, 0, 0, w, h)
+  const a = document.createElement('a')
+  a.href = out.toDataURL('image/png')
+  a.download = `bloch-${Date.now()}.png`
+  a.click()
 }
 
 const CHIP = {
@@ -39,6 +85,7 @@ export default function BlochLab() {
   const [axisPreview, setAxisPreview] = useState(null)
   const [challenge, setChallenge] = useState(null)
   const [solved, setSolved] = useState(readSolved)
+  const sphereRef = useRef(null)
 
   const gatesUsed = useMemo(
     () => timeline.slice(1, cursor + 1).filter((e) => e.kind === 'gate').length,
@@ -85,11 +132,12 @@ export default function BlochLab() {
                 icon={Eraser}
                 active={showTrail}
               />
+              <IconButton label="Save PNG" onClick={() => saveSnapshot(sphereRef.current)} icon={Camera} />
               <IconButton label="Reset" onClick={() => bloch.reset(challenge?.start ?? KET.zero)} icon={RotateCcw} />
             </>
           }
         >
-          <div className="relative">
+          <div ref={sphereRef} className="relative bg-lab-900">
             <BlochSphere3D
               vector={display}
               ghost={ghost}
@@ -143,6 +191,15 @@ export default function BlochLab() {
       <div className="grid gap-5 md:grid-cols-2 xl:col-span-12">
         <MeasurePanel vec={vec} onCollapse={(label, v) => bloch.setVector(label, v, 'measure')} disabled={Boolean(challenge)} />
         <DecoherencePanel vec={vec} onIdle={(label, v) => bloch.setVector(label, v, 'relax')} disabled={Boolean(challenge)} />
+      </div>
+
+      <div className="xl:col-span-12">
+        <PulsePanel
+          vec={vec}
+          onPulse={bloch.applyRotation}
+          onAxisPreview={challenge ? undefined : setAxisPreview}
+          disabled={Boolean(challenge)}
+        />
       </div>
     </div>
   )
