@@ -9,6 +9,14 @@ const INPUTS = {
 
 export default {
   id: 'teleportation',
+  track: 'protocol',
+  delivers: 'An unknown qubit state, moved without the qubit itself travelling.',
+  parties: [
+    { qubit: 'msg', who: 'Alice', role: 'the unknown state to send' },
+    { qubit: 'alice', who: 'Alice', role: 'her half of the shared pair' },
+    { qubit: 'bob', who: 'Bob', role: 'his half — becomes the message' },
+  ],
+  cost: { ebits: 1, qubitsSent: 0, classicalBits: 2, note: 'The two bits travel no faster than light, which is why this cannot signal.' },
   name: 'Quantum Teleportation',
   level: 'Beginner',
   category: 'Communication',

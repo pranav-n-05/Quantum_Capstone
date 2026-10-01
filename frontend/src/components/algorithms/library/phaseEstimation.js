@@ -14,6 +14,7 @@ const PHASES = [
 
 export default {
   id: 'qpe',
+  track: 'algorithm',
   name: 'Quantum Phase Estimation',
   level: 'Advanced',
   category: 'Transform',

@@ -5,6 +5,7 @@ const QUBITS = range(N)
 
 export default {
   id: 'qft',
+  track: 'algorithm',
   name: 'Quantum Fourier Transform',
   level: 'Advanced',
   category: 'Transform',

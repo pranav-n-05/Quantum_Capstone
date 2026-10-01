@@ -1,10 +1,10 @@
-import { Gauge, CircuitBoard, Orbit, Route } from 'lucide-react'
+import { Gauge, CircuitBoard, Orbit, Library } from 'lucide-react'
 
 const OPTIONS = [
   { value: 'dashboard', label: 'Dashboard', icon: Gauge, title: 'Live fleet telemetry' },
   { value: 'playground', label: 'Playground', icon: CircuitBoard, title: 'Build and run a circuit' },
   { value: 'bloch', label: 'Bloch Lab', icon: Orbit, title: 'Explore a single qubit on the Bloch sphere' },
-  { value: 'algorithms', label: 'Algorithms', icon: Route, title: 'Step through quantum algorithms gate by gate' },
+  { value: 'library', label: 'Library', icon: Library, title: 'Quantum protocols and algorithms, step by step' },
 ]
 
 /**

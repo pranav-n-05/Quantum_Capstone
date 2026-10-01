@@ -23,6 +23,7 @@ const diffusion = [
 
 export default {
   id: 'grover',
+  track: 'algorithm',
   name: "Grover's Search",
   level: 'Intermediate',
   category: 'Search',

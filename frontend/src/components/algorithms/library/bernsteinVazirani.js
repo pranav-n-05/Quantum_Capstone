@@ -6,6 +6,7 @@ const ANCILLA = N
 
 export default {
   id: 'bernstein-vazirani',
+  track: 'algorithm',
   name: 'Bernstein–Vazirani',
   level: 'Intermediate',
   category: 'Oracle',

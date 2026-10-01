@@ -19,12 +19,12 @@ import ErrorBoundary from './components/ErrorBoundary'
 // three.js is only needed by these two views, so they load on first visit
 // and the dashboard's own bundle stays as small as it was.
 const BlochLab = lazy(() => import('./components/bloch/BlochLab'))
-const AlgorithmsView = lazy(() => import('./components/algorithms/AlgorithmsView'))
+const LibraryView = lazy(() => import('./components/algorithms/LibraryView'))
 
 const SUBTITLES = {
   playground: 'Build a circuit and run it through a QPU noise model',
   bloch: 'One qubit, every gate as a rotation — measure it, let it decohere, solve challenges',
-  algorithms: 'Eight algorithms as a step-through debugger — watch amplitudes, phases and entanglement change',
+  library: 'Quantum protocols and algorithms as a step-through debugger — watch amplitudes, phases and entanglement change',
 }
 
 function Dashboard({ authEnabled, onSignOut, onAuthLost }) {
@@ -144,7 +144,7 @@ function Dashboard({ authEnabled, onSignOut, onAuthLost }) {
             you are choosing a device to submit to. */}
         {view === 'playground' && <Playground backends={backends} />}
 
-        {(view === 'bloch' || view === 'algorithms') && (
+        {(view === 'bloch' || view === 'library') && (
           <Suspense
             fallback={
               <div className="flex items-center gap-3 py-16 text-sm text-slate-500">
@@ -163,7 +163,7 @@ function Dashboard({ authEnabled, onSignOut, onAuthLost }) {
                 </div>
               )}
             >
-              {view === 'bloch' ? <BlochLab /> : <AlgorithmsView />}
+              {view === 'bloch' ? <BlochLab /> : <LibraryView />}
             </ErrorBoundary>
           </Suspense>
         )}
@@ -188,7 +188,7 @@ function Dashboard({ authEnabled, onSignOut, onAuthLost }) {
                 uvicorn backend.main:app --reload --port 8000
               </p>
               <p className="mt-3 text-[11px] text-slate-500">
-                The Bloch Lab and Algorithms views work without it.
+                The Bloch Lab and Library views work without it.
               </p>
             </div>
           </div>

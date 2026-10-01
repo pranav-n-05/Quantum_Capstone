@@ -8,6 +8,7 @@ import {
   Lightbulb,
   ListChecks,
   MessageSquareText,
+  Users,
   Pause,
   Play,
   SkipBack,
@@ -74,6 +75,12 @@ export default function StepDebugger({ algorithm, params, onParamChange }) {
               <Badge tone="green">{algorithm.speedup}</Badge>
             </div>
             <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{algorithm.summary}</p>
+            {algorithm.delivers && (
+              <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-signal-violet">
+                <span className="mt-px shrink-0 font-semibold uppercase tracking-wider">Delivers</span>
+                <span className="text-slate-400">{algorithm.delivers}</span>
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap gap-3">
             {algorithm.params.map((p) => (
@@ -185,6 +192,23 @@ export default function StepDebugger({ algorithm, params, onParamChange }) {
         </div>
 
         <div className="space-y-5 xl:col-span-5">
+          {algorithm.parties && (
+            <Panel title="Who holds what" icon={Users}>
+              <ol className="space-y-1.5">
+                {algorithm.parties.map((p) => (
+                  <li key={p.qubit} className="flex items-baseline gap-2 text-[11px]">
+                    <span className="w-12 shrink-0 font-mono text-slate-300">{p.qubit}</span>
+                    <span className="w-12 shrink-0 font-medium text-signal-violet">{p.who}</span>
+                    <span className="text-slate-500">{p.role}</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-2.5 border-t border-lab-700/70 pt-2 text-[10px] leading-relaxed text-slate-500">
+                Alice and Bob are far apart. Only gates on a party&rsquo;s own qubits are things that party can really do.
+              </p>
+            </Panel>
+          )}
+
           <Panel title="Each qubit on its own" icon={CircleDot} bodyClassName="p-3">
             <QubitSpheres state={state} labels={built.labels} target={built.target} />
             <p className="mt-2 px-1 text-[10px] leading-relaxed text-slate-500">
@@ -209,6 +233,17 @@ export default function StepDebugger({ algorithm, params, onParamChange }) {
               {finished ? '✓ ' : 'At the end: '}
               {built.answer.text}
             </p>
+            {algorithm.cost && (
+              <div className="mt-3 border-t border-lab-700/70 pt-3">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Resource ledger</p>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <Cost value={algorithm.cost.ebits} label="ebits" tone="violet" />
+                  <Cost value={algorithm.cost.qubitsSent} label="qubits sent" />
+                  <Cost value={algorithm.cost.classicalBits} label="classical bits" />
+                </div>
+                <p className="mt-2 text-[10px] leading-relaxed text-slate-600">{algorithm.cost.note}</p>
+              </div>
+            )}
             {algorithm.queries && (
               <div className="mt-3 grid grid-cols-2 gap-2 border-t border-lab-700/70 pt-3 text-center">
                 <div className="rounded-lg bg-lab-850 py-2">
@@ -248,6 +283,16 @@ function Transport({ label, icon: Icon, onClick, disabled }) {
     >
       <Icon size={16} />
     </button>
+  )
+}
+
+function Cost({ value, label, tone }) {
+  const zero = value === 0
+  return (
+    <div className={`rounded-lg py-2 ${tone === 'violet' ? 'bg-signal-violet/10' : 'bg-lab-850'}`}>
+      <p className={`font-mono text-lg ${zero ? 'text-slate-600' : tone === 'violet' ? 'text-signal-violet' : 'text-slate-300'}`}>{value}</p>
+      <p className="text-[10px] text-slate-500">{label}</p>
+    </div>
   )
 }
 

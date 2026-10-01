@@ -2,6 +2,13 @@ import { cx, gate } from './shared'
 
 export default {
   id: 'superdense',
+  track: 'protocol',
+  delivers: 'Two classical bits down a channel that carries only one qubit.',
+  parties: [
+    { qubit: 'alice', who: 'Alice', role: 'encodes, then posts this qubit' },
+    { qubit: 'bob', who: 'Bob', role: 'held since before the message existed' },
+  ],
+  cost: { ebits: 1, qubitsSent: 1, classicalBits: 0, note: 'Two bits arrive, but only one qubit was ever sent after the message was chosen.' },
   name: 'Superdense Coding',
   level: 'Beginner',
   category: 'Communication',

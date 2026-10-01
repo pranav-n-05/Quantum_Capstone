@@ -16,6 +16,7 @@ const ORACLES = {
 
 export default {
   id: 'deutsch-jozsa',
+  track: 'algorithm',
   name: 'Deutsch–Jozsa',
   level: 'Intermediate',
   category: 'Oracle',

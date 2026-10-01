@@ -9,6 +9,13 @@ const VARIANTS = {
 
 export default {
   id: 'bell',
+  track: 'protocol',
+  delivers: 'One shared ebit — the fuel the other two protocols burn.',
+  parties: [
+    { qubit: 'q0', who: 'Alice', role: 'keeps this half' },
+    { qubit: 'q1', who: 'Bob', role: 'carries this half away' },
+  ],
+  cost: { ebits: '+1 made', qubitsSent: 1, classicalBits: 0, note: 'One qubit must physically travel once, to put the pair in two places.' },
   name: 'Bell State',
   level: 'Beginner',
   category: 'Entanglement',

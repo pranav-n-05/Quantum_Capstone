@@ -5,7 +5,7 @@ import { CHALLENGES } from '../components/bloch/challenges'
 import { axisRotation, MATRICES, rx, ry, rz, u } from './gates'
 import { applyOps, blochVector, probabilities, vectorLength, zeroState } from './statevector'
 import { marginal, runSteps } from './run'
-import { ALGORITHMS, defaultParams } from '../components/algorithms/library'
+import { ALGORITHMS, defaultParams, PROTOCOLS, PURE_ALGORITHMS, TRACK_ORDER, TRACKS } from '../components/algorithms/library'
 
 const close = (a, b, eps = 1e-9) => expect(Math.abs(a - b)).toBeLessThan(eps)
 const closeVec = (a, b, eps = 1e-9) => {
@@ -216,5 +216,53 @@ describe('rabi drive', () => {
   it('pure detuning only precesses about z', () => {
     const v = drive(KET.plus, { rabi: 0, detuning: 2.5, phase: 0 }, 100)
     close(v, KET.plusI)
+  })
+})
+
+describe('library tracks', () => {
+  it('every entry declares a track that exists', () => {
+    for (const a of ALGORITHMS) expect(TRACK_ORDER).toContain(a.track)
+  })
+
+  it('the two tracks partition the library with nothing lost or duplicated', () => {
+    expect(PROTOCOLS.length + PURE_ALGORITHMS.length).toBe(ALGORITHMS.length)
+    const ids = [...PROTOCOLS, ...PURE_ALGORITHMS].map((a) => a.id)
+    expect(new Set(ids).size).toBe(ALGORITHMS.length)
+  })
+
+  it('puts the entanglement protocols on one side and the computations on the other', () => {
+    expect(PROTOCOLS.map((a) => a.id)).toEqual(['bell', 'teleportation', 'superdense'])
+    expect(PURE_ALGORITHMS.map((a) => a.id)).toEqual(['deutsch-jozsa', 'bernstein-vazirani', 'grover', 'qft', 'qpe'])
+  })
+
+  it('every track is non-empty, so neither card opens onto nothing', () => {
+    for (const id of TRACK_ORDER) expect(TRACKS[id].items.length).toBeGreaterThan(0)
+  })
+
+  it('protocols carry the fields their panels render', () => {
+    for (const p of PROTOCOLS) {
+      expect(p.delivers).toBeTruthy()
+      expect(p.cost.note).toBeTruthy()
+      expect(p.parties.length).toBeGreaterThan(0)
+      // Every party must name a real qubit in the built circuit, or the
+      // "who holds what" list and the spheres below it disagree.
+      const labels = p.build(defaultParams(p)).labels
+      for (const party of p.parties) expect(labels).toContain(party.qubit)
+    }
+  })
+
+  it('teleportation spends an ebit and two classical bits, sending no qubit', () => {
+    const t = PROTOCOLS.find((a) => a.id === 'teleportation')
+    expect(t.cost).toMatchObject({ ebits: 1, qubitsSent: 0, classicalBits: 2 })
+  })
+
+  it('superdense sends one qubit and no classical bits', () => {
+    const s = PROTOCOLS.find((a) => a.id === 'superdense')
+    expect(s.cost).toMatchObject({ ebits: 1, qubitsSent: 1, classicalBits: 0 })
+  })
+
+  it('only algorithms advertise a query advantage', () => {
+    for (const p of PROTOCOLS) expect(p.queries).toBeUndefined()
+    for (const a of PURE_ALGORITHMS) expect(a.cost).toBeUndefined()
   })
 })
