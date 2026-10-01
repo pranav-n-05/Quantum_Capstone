@@ -159,6 +159,7 @@ export default function BlochSphere3D({
   accent: accentToken = 'signal-cyan',
   ghostAccent = 'signal-violet',
   className = '',
+  flat: forceFlat = false,
 }) {
   const colors = useThemeColors()
   const accent = colors[accentToken]
@@ -175,7 +176,9 @@ export default function BlochSphere3D({
       className={className}
     />
   )
-  if (!hasWebGL()) return flat
+  // Many small spheres would each need their own WebGL context, and browsers
+  // cap those at about sixteen: callers drawing lots of them ask for SVG.
+  if (forceFlat || !hasWebGL()) return flat
 
   return (
     <ErrorBoundary fallback={flat}>

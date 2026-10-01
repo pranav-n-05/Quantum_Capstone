@@ -15,6 +15,14 @@ import { matrixFor } from './gates'
  *   { g: 'swap', t: [0, 2] }             swap
  *   { g: 'gphase', t: [], angle }        global phase e^{i·angle} (unobservable;
  *                                        used only to keep displayed signs textbook)
+ *   { g: 'mat', t: [q], c?, m, label }   any 2×2 unitary `m` (e.g. e^{iAt} for HHL)
+ *   { g: 'perm', t: [q0…qk], c?, map }   reversible classical function on a
+ *                                        register: |v⟩ → |map[v]⟩, v read with
+ *                                        t[0] as its least-significant bit
+ *                                        (modular multiplication, walk shifts)
+ *
+ * Any op may also carry `nc: [qubits]`, negative controls that must be 0 --
+ * oracles that mark |010⟩ read far better as one gate than as X·CCZ·X.
  */
 
 export function zeroState(n) {
@@ -26,17 +34,23 @@ export function zeroState(n) {
 
 const copy = (state) => ({ n: state.n, re: state.re.slice(), im: state.im.slice() })
 
-/** Apply a 2×2 matrix to `target`, only on basis states where every control is 1. */
-export function applyMatrix(state, M, target, controls = []) {
+const maskOf = (qs = []) => qs.reduce((m, q) => m | (1 << q), 0)
+
+/**
+ * Apply a 2×2 matrix to `target`, only on basis states where every control is
+ * 1 and every negative control is 0.
+ */
+export function applyMatrix(state, M, target, controls = [], negControls = []) {
   const next = copy(state)
   const { re, im } = next
   const bit = 1 << target
-  const mask = controls.reduce((m, q) => m | (1 << q), 0)
+  const mask = maskOf(controls)
+  const neg = maskOf(negControls)
   const [[a, b], [cc, d]] = M
 
   for (let i = 0; i < re.length; i++) {
     if (i & bit) continue // visit each (|…0…⟩, |…1…⟩) pair once, from its 0 side
-    if ((i & mask) !== mask) continue
+    if ((i & mask) !== mask || (i & neg) !== 0) continue
     const j = i | bit
     const r0 = re[i], i0 = im[i], r1 = re[j], i1 = im[j]
     re[i] = a.re * r0 - a.im * i0 + b.re * r1 - b.im * i1
@@ -72,10 +86,38 @@ function globalPhase(state, angle) {
   return next
 }
 
+/** |v⟩ → |map[v]⟩ on the register `targets`, where the controls allow. */
+export function permute(state, targets, map, controls = [], negControls = []) {
+  const next = copy(state)
+  next.re.fill(0)
+  next.im.fill(0)
+  const mask = maskOf(controls)
+  const neg = maskOf(negControls)
+  const regMask = maskOf(targets)
+  for (let i = 0; i < state.re.length; i++) {
+    let j = i
+    if ((i & mask) === mask && (i & neg) === 0) {
+      let v = 0
+      targets.forEach((q, k) => {
+        if (i & (1 << q)) v |= 1 << k
+      })
+      const w = map[v]
+      j = i & ~regMask
+      targets.forEach((q, k) => {
+        if (w & (1 << k)) j |= 1 << q
+      })
+    }
+    next.re[j] += state.re[i]
+    next.im[j] += state.im[i]
+  }
+  return next
+}
+
 export function applyOp(state, op) {
   if (op.g === 'swap') return swap(state, op.t[0], op.t[1])
   if (op.g === 'gphase') return globalPhase(state, op.angle)
-  return applyMatrix(state, matrixFor(op), op.t[0], op.c ?? [])
+  if (op.g === 'perm') return permute(state, op.t, op.map, op.c ?? [], op.nc ?? [])
+  return applyMatrix(state, matrixFor(op), op.t[0], op.c ?? [], op.nc ?? [])
 }
 
 export const applyOps = (state, ops) => ops.reduce(applyOp, state)

@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+
 import { bitstring } from '../../quantum/statevector'
 
 /**
@@ -30,15 +32,32 @@ export function PhaseWheel({ size = 28 }) {
   )
 }
 
+// Past this many basis states a bar per state is a barcode, not a chart: show
+// only the states that are actually present, in index order.
+const MAX_ALL = 32
+const MAX_SHOWN = 48
+
 export default function AmplitudeBars({ state }) {
   const { n, re, im } = state
-  const count = re.length
+  const total = re.length
+  const indices = useMemo(() => {
+    const all = Array.from({ length: total }, (_, i) => i)
+    if (total <= MAX_ALL) return all
+    const live = all.filter((i) => Math.hypot(re[i], im[i]) > 1e-6)
+    if (live.length <= MAX_SHOWN) return live
+    return [...live]
+      .sort((a, b) => Math.hypot(re[b], im[b]) - Math.hypot(re[a], im[a]))
+      .slice(0, MAX_SHOWN)
+      .sort((a, b) => a - b)
+  }, [re, im, total])
+  const count = indices.length
   const showPercent = count <= 16
+  const filtered = count < total
 
   return (
     <div>
       <div className="flex h-44 items-end gap-1">
-        {Array.from({ length: count }, (_, i) => {
+        {indices.map((i) => {
           const mag = Math.hypot(re[i], im[i])
           const prob = mag * mag
           const visible = mag > 1e-6
@@ -63,12 +82,21 @@ export default function AmplitudeBars({ state }) {
         })}
       </div>
       <div className="mt-1 flex gap-1 border-t border-lab-700 pt-1">
-        {Array.from({ length: count }, (_, i) => (
-          <span key={i} className={`min-w-0 flex-1 text-center font-mono ${count > 16 ? 'text-[7px]' : 'text-[10px]'} text-slate-500`}>
+        {indices.map((i) => (
+          <span
+            key={i}
+            className={`min-w-0 flex-1 text-center font-mono ${count > 16 ? 'text-[7px]' : 'text-[10px]'} text-slate-500 ${count > 16 && n > 4 ? '[writing-mode:vertical-rl] rotate-180' : ''}`}
+          >
             {bitstring(i, n)}
           </span>
         ))}
       </div>
+      {filtered && (
+        <p className="mt-1 text-[10px] text-slate-500">
+          Showing {count} of {total} basis states — every state with non-zero amplitude
+          {count === MAX_SHOWN ? ' (the largest ones)' : ''}.
+        </p>
+      )}
     </div>
   )
 }

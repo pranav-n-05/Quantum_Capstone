@@ -1,12 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
+import { msUntilNextSwitch, timeOfDayTheme } from './timeOfDay'
+
 /**
  * Three-state colour theme: `light`, `dark`, or `system`.
  *
- * `system` is a *live* subscription, not a one-off read -- if the OS flips at
- * sunset the dashboard follows without a reload. It is also the only state
- * that stores nothing: absence of a stored value *is* "follow the system",
- * which keeps this in agreement with the pre-paint script in index.html.
+ * `system` follows the local time of day (see ./timeOfDay.js): light by day,
+ * dark at night. It is a *live* subscription, not a one-off read -- a timer
+ * fires at the next 06:00 / 18:00 boundary, and returning to the tab re-checks
+ * in case the laptop slept through one. It is also the only state that stores
+ * nothing: absence of a stored value *is* "system", which keeps this in
+ * agreement with the pre-paint script in index.html.
  */
 
 export const THEME_STORAGE_KEY = 'qtd-theme'
@@ -23,21 +27,29 @@ function readStoredTheme() {
   }
 }
 
-function readSystemTheme() {
-  return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
-}
 
 export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState(readStoredTheme)
-  const [systemTheme, setSystemTheme] = useState(readSystemTheme)
+  const [systemTheme, setSystemTheme] = useState(() => timeOfDayTheme())
 
-  // Track the OS preference at all times, not just while in `system` mode, so
+  // Track the clock at all times, not just while in `system` mode, so
   // switching back to `system` is instant and correct.
   useEffect(() => {
-    const query = window.matchMedia('(prefers-color-scheme: light)')
-    const onChange = (event) => setSystemTheme(event.matches ? 'light' : 'dark')
-    query.addEventListener('change', onChange)
-    return () => query.removeEventListener('change', onChange)
+    let timer
+    const sync = () => {
+      setSystemTheme(timeOfDayTheme())
+      window.clearTimeout(timer)
+      timer = window.setTimeout(sync, msUntilNextSwitch())
+    }
+    sync()
+    const onVisible = () => document.visibilityState === 'visible' && sync()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', sync)
+    return () => {
+      window.clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', sync)
+    }
   }, [])
 
   const resolvedTheme = theme === 'system' ? systemTheme : theme

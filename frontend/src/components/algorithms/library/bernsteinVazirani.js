@@ -7,6 +7,17 @@ const ANCILLA = N
 export default {
   id: 'bernstein-vazirani',
   track: 'algorithm',
+  group: 'oracle',
+  dir: { problem: 'Learning a hidden bit string', advantage: 'Polynomial (linear to O(1))', mechanism: 'Quantum superposition, phase kickback' },
+  keyIdea:
+    'The oracle multiplies input x by (−1)^{s·x}. That pattern of signs is exactly what a Hadamard turns back into the string s — so the secret is read out directly, all bits in one query.',
+  limits: 'Classically you need n queries (one per bit); the gain is n → 1, not exponential.',
+  flow: [
+    { lane: 'Quantum computer', title: 'Superpose every input', text: 'Hadamards on n inputs; answer qubit in |−⟩.', kind: 'quantum' },
+    { lane: 'Quantum computer', title: 'One oracle call', text: 'Each input picks up the sign (−1)^{s·x}.', kind: 'quantum' },
+    { lane: 'Quantum computer', title: 'Hadamard the inputs', text: 'The sign pattern turns into the bitstring s.', kind: 'quantum' },
+    { lane: 'Quantum computer', title: 'Measure', text: 'Reads s exactly.', kind: 'measure' },
+  ],
   name: 'Bernstein–Vazirani',
   level: 'Intermediate',
   category: 'Oracle',

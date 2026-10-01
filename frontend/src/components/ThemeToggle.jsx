@@ -1,5 +1,6 @@
 import { Sun, Moon, Monitor } from 'lucide-react'
 
+import { SYSTEM_THEME_HINT } from '../hooks/timeOfDay'
 import { useTheme } from '../hooks/useTheme'
 
 const OPTIONS = [
@@ -36,7 +37,7 @@ export default function ThemeToggle() {
             aria-label={`${label} theme`}
             title={
               value === 'system'
-                ? `Follow the operating system — currently ${resolvedTheme}`
+                ? `${SYSTEM_THEME_HINT} — currently ${resolvedTheme}`
                 : `${label} theme`
             }
             onClick={() => setTheme(value)}

@@ -20,9 +20,11 @@ const TOP = 22
 const LABEL = { h: 'H', x: 'X', y: 'Y', z: 'Z', s: 'S', sdg: 'S†', t: 'T', tdg: 'T†', rx: 'Rx', ry: 'Ry', rz: 'Rz', p: 'P', u: 'U', cp: 'P' }
 
 function span(op) {
-  const qs = [...op.t, ...(op.c ?? [])]
+  const qs = [...op.t, ...(op.c ?? []), ...(op.nc ?? [])]
   return [Math.min(...qs), Math.max(...qs)]
 }
+
+const fontFor = (label) => (label.length > 3 ? 8 : label.length > 1 ? 10 : 12)
 
 function packColumns(ops) {
   const cols = []
@@ -64,14 +66,42 @@ function Gate({ op, x, y, colors }) {
 
   const target = op.t[0]
   const controls = op.c ?? []
-  const label = LABEL[op.g] ?? op.g.toUpperCase()
+  const negControls = op.nc ?? []
+  const label = op.label ?? LABEL[op.g] ?? op.g.toUpperCase()
+  const dots = (
+    <>
+      {controls.map((q) => (
+        <circle key={q} cx={x} cy={y(q)} r={4.5} fill={lineColor} />
+      ))}
+      {negControls.map((q) => (
+        <circle key={`n${q}`} cx={x} cy={y(q)} r={4.5} fill={colors['lab-900']} stroke={lineColor} strokeWidth={1.4} />
+      ))}
+    </>
+  )
+
+  // A function on a whole register: one tall box across its wires.
+  if (op.g === 'perm') {
+    const top = Math.min(...op.t)
+    const bottom = Math.max(...op.t)
+    const ctl = [...controls, ...negControls]
+    return (
+      <g>
+        {ctl.length > 0 && (
+          <line x1={x} y1={y(Math.min(...ctl, top))} x2={x} y2={y(Math.max(...ctl, bottom))} stroke={lineColor} strokeWidth={1.4} />
+        )}
+        {dots}
+        <rect x={x - 17} y={y(top) - 13} width={34} height={y(bottom) - y(top) + 26} rx={5} fill={colors['lab-850']} stroke={colors['signal-violet']} strokeWidth={1.2} />
+        <text x={x} y={(y(top) + y(bottom)) / 2 + 4} textAnchor="middle" fontSize={fontFor(label)} fontFamily="ui-monospace, monospace" fill={colors['signal-violet']} fontWeight={600}>
+          {label}
+        </text>
+      </g>
+    )
+  }
 
   return (
     <g>
       {multi && <line x1={x} y1={y(lo)} x2={x} y2={y(hi)} stroke={lineColor} strokeWidth={1.4} />}
-      {controls.map((q) => (
-        <circle key={q} cx={x} cy={y(q)} r={4.5} fill={lineColor} />
-      ))}
+      {dots}
       {op.g === 'cx' ? (
         <g stroke={color} strokeWidth={1.6} fill={colors['lab-900']}>
           <circle cx={x} cy={y(target)} r={10} />
@@ -92,7 +122,7 @@ function Gate({ op, x, y, colors }) {
             stroke={color}
             strokeWidth={1.2}
           />
-          <text x={x} y={y(target) + 4} textAnchor="middle" fontSize={label.length > 1 ? 10 : 12} fontFamily="ui-monospace, monospace" fill={color} fontWeight={600}>
+          <text x={x} y={y(target) + 4} textAnchor="middle" fontSize={fontFor(label)} fontFamily="ui-monospace, monospace" fill={color} fontWeight={600}>
             {label}
           </text>
         </g>
@@ -110,7 +140,9 @@ export default function CircuitStrip({ built, step, onSeek }) {
     let x = LABEL_W + PAD_X
     return steps.map((s, i) => {
       // A global phase has no wire to sit on and no observable effect: not drawn.
-      const drawn = s.gates.filter((op) => op.g !== 'gphase')
+      // A step may supply `display` -- a boxed summary such as "G⁸" -- when
+      // its real gate list would be hundreds of columns wide.
+      const drawn = (s.display ?? s.gates).filter((op) => op.g !== 'gphase')
       const cols = drawn.length ? packColumns(drawn) : []
       const width = Math.max(1, cols.length) * COL
       const group = { i, x, width, cols, title: s.title }

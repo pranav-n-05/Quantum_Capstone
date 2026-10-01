@@ -64,44 +64,28 @@ export default function StepDebugger({ algorithm, params, onParamChange }) {
 
   return (
     <div className="space-y-5">
-      {/* --- header: what, why, and the knobs -------------------------------- */}
-      <section className="panel px-5 py-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 max-w-2xl">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold tracking-tight text-slate-100">{algorithm.name}</h2>
-              <Badge>{algorithm.level}</Badge>
-              <Badge tone="violet">{algorithm.category}</Badge>
-              <Badge tone="green">{algorithm.speedup}</Badge>
-            </div>
-            <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{algorithm.summary}</p>
-            {algorithm.delivers && (
-              <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-signal-violet">
-                <span className="mt-px shrink-0 font-semibold uppercase tracking-wider">Delivers</span>
-                <span className="text-slate-400">{algorithm.delivers}</span>
-              </p>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {algorithm.params.map((p) => (
-              <label key={p.key} className="block text-[11px] text-slate-500">
-                {p.label}
-                <select
-                  value={params[p.key]}
-                  onChange={(e) => onParamChange(p.key, e.target.value)}
-                  className="mt-1 block w-full min-w-[9rem] rounded-lg border border-lab-700 bg-lab-850 px-2.5 py-1.5 font-mono text-xs text-slate-200 focus:border-signal-cyan/60 focus:outline-none"
-                >
-                  {p.options.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* --- the knobs ------------------------------------------------------- */}
+      {algorithm.params.length > 0 && (
+        <section className="panel flex flex-wrap items-end gap-3 px-4 py-3">
+          <span className="mr-1 self-center text-[10px] font-semibold uppercase tracking-wider text-slate-500">Try it with</span>
+          {algorithm.params.map((p) => (
+            <label key={p.key} className="block text-[11px] text-slate-500">
+              {p.label}
+              <select
+                value={params[p.key]}
+                onChange={(e) => onParamChange(p.key, e.target.value)}
+                className="mt-1 block w-full min-w-[9rem] rounded-lg border border-lab-700 bg-lab-850 px-2.5 py-1.5 font-mono text-xs text-slate-200 focus:border-signal-cyan/60 focus:outline-none"
+              >
+                {p.options.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </section>
+      )}
 
       {/* --- circuit + transport ---------------------------------------------- */}
       <Panel
@@ -146,7 +130,7 @@ export default function StepDebugger({ algorithm, params, onParamChange }) {
       </Panel>
 
       {/* --- what just happened ----------------------------------------------- */}
-      <div className="grid gap-5 xl:grid-cols-12">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-12">
         <div className="space-y-5 xl:col-span-7">
           <Panel
             title={current ? `Step ${step} · ${current.title}` : 'Before the first gate'}
@@ -233,17 +217,6 @@ export default function StepDebugger({ algorithm, params, onParamChange }) {
               {finished ? '✓ ' : 'At the end: '}
               {built.answer.text}
             </p>
-            {algorithm.cost && (
-              <div className="mt-3 border-t border-lab-700/70 pt-3">
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Resource ledger</p>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <Cost value={algorithm.cost.ebits} label="ebits" tone="violet" />
-                  <Cost value={algorithm.cost.qubitsSent} label="qubits sent" />
-                  <Cost value={algorithm.cost.classicalBits} label="classical bits" />
-                </div>
-                <p className="mt-2 text-[10px] leading-relaxed text-slate-600">{algorithm.cost.note}</p>
-              </div>
-            )}
             {algorithm.queries && (
               <div className="mt-3 grid grid-cols-2 gap-2 border-t border-lab-700/70 pt-3 text-center">
                 <div className="rounded-lg bg-lab-850 py-2">
@@ -284,23 +257,4 @@ function Transport({ label, icon: Icon, onClick, disabled }) {
       <Icon size={16} />
     </button>
   )
-}
-
-function Cost({ value, label, tone }) {
-  const zero = value === 0
-  return (
-    <div className={`rounded-lg py-2 ${tone === 'violet' ? 'bg-signal-violet/10' : 'bg-lab-850'}`}>
-      <p className={`font-mono text-lg ${zero ? 'text-slate-600' : tone === 'violet' ? 'text-signal-violet' : 'text-slate-300'}`}>{value}</p>
-      <p className="text-[10px] text-slate-500">{label}</p>
-    </div>
-  )
-}
-
-function Badge({ children, tone = 'cyan' }) {
-  const styles = {
-    cyan: 'border-signal-cyan/30 text-signal-cyan',
-    violet: 'border-signal-violet/30 text-signal-violet',
-    green: 'border-signal-green/30 text-signal-green',
-  }
-  return <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${styles[tone]}`}>{children}</span>
 }

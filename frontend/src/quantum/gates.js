@@ -75,6 +75,8 @@ export function matrixFor(op) {
       return phase(op.angle)
     case 'u':
       return u(...op.params)
+    case 'mat':
+      return op.m
     case 'cx':
       return MATRICES.x
     case 'cz':

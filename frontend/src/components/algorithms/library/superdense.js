@@ -3,6 +3,17 @@ import { cx, gate } from './shared'
 export default {
   id: 'superdense',
   track: 'protocol',
+  group: 'communication',
+  dir: { domain: 'Quantum Communication', function: 'Transmitting two classical bits using one qubit', resource: 'Entanglement (EPR pairs)' },
+  keyIdea:
+    'The four Bell states are perfectly distinguishable, and Alice can reach any of them by acting on her half alone. Choosing one of four states is two bits — delivered by sending one qubit.',
+  limits: 'Only one qubit travels after the message is chosen, but the pair had to be distributed beforehand — the ebit is the hidden cost.',
+  flow: [
+    { lane: 'Source', title: 'Share a Bell pair', text: 'Before any message exists.', kind: 'quantum' },
+    { lane: 'Alice', title: 'Encode 2 bits', text: '00 → I · 01 → Z · 10 → X · 11 → ZX, on her qubit only.', kind: 'quantum', via: 'quantum' },
+    { lane: 'Bob', title: 'Receive Alice’s qubit', text: 'The only qubit sent.', kind: 'quantum', via: 'quantum' },
+    { lane: 'Bob', title: 'Bell measurement', text: 'CNOT + H, measure both: reads both bits.', kind: 'measure' },
+  ],
   delivers: 'Two classical bits down a channel that carries only one qubit.',
   parties: [
     { qubit: 'alice', who: 'Alice', role: 'encodes, then posts this qubit' },

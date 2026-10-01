@@ -10,6 +10,18 @@ const VARIANTS = {
 export default {
   id: 'bell',
   track: 'protocol',
+  group: 'foundations',
+  dir: { domain: 'Foundations', function: 'Creating a maximally entangled pair (the ebit every protocol spends)', resource: 'Hadamard + CNOT' },
+  keyIdea:
+    'H makes q0 undecided; CNOT copies that indecision onto q1. The pair now has one shared state and neither qubit has a state of its own — the arrows on both spheres vanish.',
+  limits: 'Not in the directory PDF: included as the foundation the communication protocols are built on.',
+  flow: [
+    { lane: 'Source', title: 'Two qubits in |00⟩', text: 'Independent, both definite.', kind: 'quantum' },
+    { lane: 'Source', title: 'Hadamard on q0', text: 'q0 becomes (|0⟩ + |1⟩)/√2.', kind: 'quantum' },
+    { lane: 'Source', title: 'CNOT q0 → q1', text: 'Result: (|00⟩ + |11⟩)/√2.', kind: 'quantum' },
+    { lane: 'Alice', title: 'Alice keeps q0', text: 'Her half alone is a fair coin.', kind: 'quantum', via: 'quantum' },
+    { lane: 'Bob', title: 'Bob gets q1', text: 'His too — but the two coins always agree.', kind: 'quantum', via: 'quantum' },
+  ],
   delivers: 'One shared ebit — the fuel the other two protocols burn.',
   parties: [
     { qubit: 'q0', who: 'Alice', role: 'keeps this half' },

@@ -6,6 +6,17 @@ const QUBITS = range(N)
 export default {
   id: 'qft',
   track: 'algorithm',
+  group: 'fourier',
+  dir: { problem: 'Basis transformation, period finding', advantage: 'Exponential (circuit depth)', mechanism: 'Controlled-phase rotations' },
+  keyIdea:
+    'A Fourier transform of 2ⁿ numbers needs n·2ⁿ classical steps. On qubits it needs only about n²/2 gates, because each qubit’s output phase depends on the input bits through a few controlled rotations.',
+  limits: 'You cannot read the 2ⁿ Fourier coefficients out — measuring gives one sample. The QFT is useful inside algorithms (Shor, phase estimation) that need only that one sample.',
+  flow: [
+    { lane: 'Quantum computer', title: 'Input |x⟩', text: 'A basis state, or any superposition.', kind: 'quantum' },
+    { lane: 'Quantum computer', title: 'Top qubit: H, then controlled phases', text: 'Its phase becomes x/2ⁿ of a turn.', kind: 'quantum', loop: 'once per qubit' },
+    { lane: 'Quantum computer', title: 'Swap the order', text: 'Undo the bit reversal the cascade leaves behind.', kind: 'quantum' },
+    { lane: 'Quantum computer', title: 'Output: phases encode x', text: 'Every bar the same height; colours spin at speed x.', kind: 'quantum' },
+  ],
   name: 'Quantum Fourier Transform',
   level: 'Advanced',
   category: 'Transform',

@@ -10,6 +10,17 @@ const INPUTS = {
 export default {
   id: 'teleportation',
   track: 'protocol',
+  group: 'communication',
+  dir: { domain: 'Quantum Communication', function: 'Transferring a quantum state to a distant location', resource: 'Entanglement, classical channel' },
+  keyIdea:
+    'Alice’s Bell measurement leaves Bob’s qubit holding |ψ⟩ up to one of four known errors (I, X, Z, XZ). Her two classical bits name the error, and Bob undoes it. No qubit travels; the original is destroyed, so nothing is cloned.',
+  limits: 'The debugger applies Bob’s corrections as controlled gates ("deferred measurement") — mathematically identical to measuring and phoning the bits.',
+  flow: [
+    { lane: 'Source', title: 'Share a Bell pair', text: 'One half to Alice, one to Bob — ahead of time.', kind: 'quantum' },
+    { lane: 'Alice', title: 'Bell measurement', text: 'CNOT + H on (|ψ⟩, her half), then measure both: 2 bits.', kind: 'measure', via: 'quantum' },
+    { lane: 'Bob', title: 'Receive 2 classical bits', text: 'Over an ordinary channel — no faster than light.', kind: 'classical', via: 'classical' },
+    { lane: 'Bob', title: 'Apply X^{m₁} Z^{m₀}', text: 'His qubit becomes exactly |ψ⟩.', kind: 'quantum' },
+  ],
   delivers: 'An unknown qubit state, moved without the qubit itself travelling.',
   parties: [
     { qubit: 'msg', who: 'Alice', role: 'the unknown state to send' },

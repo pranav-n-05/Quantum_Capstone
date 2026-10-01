@@ -15,6 +15,19 @@ const PHASES = [
 export default {
   id: 'qpe',
   track: 'algorithm',
+  group: 'fourier',
+  dir: { problem: 'Estimating eigenvalues of a unitary operator', advantage: 'Exponential', mechanism: 'QFT inverse' },
+  keyIdea:
+    'Run U, U², U⁴… each controlled by one counting qubit. Because the target is an eigenstate, nothing happens to it — the phase kicks back onto the counters, writing θ as a binary fraction that the inverse QFT reads out.',
+  limits: 'You need the eigenstate (or a state close to it) and the ability to run U^(2ᵏ) efficiently. Precision costs one qubit per binary digit.',
+  flow: [
+    { lane: 'Quantum computer', title: 'Prepare eigenstate |ψ⟩', text: 'U|ψ⟩ = e^{2πiθ}|ψ⟩, θ unknown.', kind: 'quantum' },
+    { lane: 'Quantum computer', title: 'Counting qubits → |+⟩', text: 'One per binary digit of θ.', kind: 'quantum' },
+    { lane: 'Quantum computer', title: 'Controlled-U^(2ᵏ)', text: 'Counter k picks up phase 2ᵏθ (kickback).', kind: 'quantum', loop: 'k = 0 … t−1' },
+    { lane: 'Quantum computer', title: 'Inverse QFT', text: 'Phases become a binary number.', kind: 'quantum' },
+    { lane: 'Quantum computer', title: 'Measure', text: 'Integer m.', kind: 'measure' },
+    { lane: 'Classical computer', title: 'θ ≈ m / 2ᵗ', text: 'Exact when θ has t binary digits.', kind: 'classical', via: 'classical' },
+  ],
   name: 'Quantum Phase Estimation',
   level: 'Advanced',
   category: 'Transform',

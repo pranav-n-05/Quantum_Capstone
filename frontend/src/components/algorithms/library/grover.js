@@ -24,6 +24,18 @@ const diffusion = [
 export default {
   id: 'grover',
   track: 'algorithm',
+  group: 'search',
+  dir: { problem: 'Unstructured database search', advantage: 'Polynomial (quadratic)', mechanism: 'Amplitude amplification' },
+  keyIdea:
+    'Each round is two reflections, and two reflections make a rotation: the state turns a fixed angle toward the answer. After about (π/4)·√N rounds it points straight at it — keep going and it rotates past.',
+  limits: 'Quadratic, not exponential: for N = 10¹² items it needs about 10⁶ rounds instead of 10¹², and the oracle must be built as a circuit.',
+  flow: [
+    { lane: 'Quantum computer', title: 'Superpose all N items', text: 'Hadamard on every qubit: each item gets amplitude 1/√N.', kind: 'quantum' },
+    { lane: 'Quantum computer', title: 'Oracle marks the answer', text: 'Flips the sign of the target’s amplitude — no probability changes yet.', kind: 'quantum', loop: '≈ (π/4)√N rounds' },
+    { lane: 'Quantum computer', title: 'Diffusion', text: 'Reflect every amplitude about the average: the marked one grows.', kind: 'quantum', loop: '≈ (π/4)√N rounds' },
+    { lane: 'Quantum computer', title: 'Measure', text: 'The answer comes out with high probability.', kind: 'measure' },
+    { lane: 'Classical computer', title: 'Check it', text: 'One classical lookup confirms the result; rerun if wrong.', kind: 'classical', via: 'classical' },
+  ],
   name: "Grover's Search",
   level: 'Intermediate',
   category: 'Search',

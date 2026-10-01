@@ -5,7 +5,7 @@ import { CHALLENGES } from '../components/bloch/challenges'
 import { axisRotation, MATRICES, rx, ry, rz, u } from './gates'
 import { applyOps, blochVector, probabilities, vectorLength, zeroState } from './statevector'
 import { marginal, runSteps } from './run'
-import { ALGORITHMS, defaultParams, PROTOCOLS, PURE_ALGORITHMS, TRACK_ORDER, TRACKS } from '../components/algorithms/library'
+import { ALGORITHMS, COLUMNS, defaultParams, GROUPS, PROTOCOLS, PURE_ALGORITHMS, TRACK_ORDER, TRACKS } from '../components/algorithms/library'
 
 const close = (a, b, eps = 1e-9) => expect(Math.abs(a - b)).toBeLessThan(eps)
 const closeVec = (a, b, eps = 1e-9) => {
@@ -96,7 +96,7 @@ describe('bloch geometry', () => {
 })
 
 describe('algorithm library', () => {
-  for (const algorithm of ALGORITHMS) {
+  for (const algorithm of ALGORITHMS.filter((a) => a.build)) {
     // Exercise every option of every knob, not just the defaults.
     const combos = algorithm.params.reduce(
       (acc, p) => acc.flatMap((c) => p.options.map((o) => ({ ...c, [p.key]: o.value }))),
@@ -125,6 +125,7 @@ describe('algorithm library', () => {
           expect(best).toBe(answer.bits[0])
         }
         if (answer.notBits) close(dist[answer.notBits[0]] ?? 0, 0)
+        if (answer.check) expect(answer.check(dist, final)).toBe(true)
         if (built.target) {
           closeVec(blochVector(final, built.target.qubit), fromAngles(built.target.theta, built.target.phi))
         }
@@ -220,45 +221,72 @@ describe('rabi drive', () => {
 })
 
 describe('library tracks', () => {
-  it('every entry declares a track that exists', () => {
-    for (const a of ALGORITHMS) expect(TRACK_ORDER).toContain(a.track)
+  // The course directory (Quantum Algorithms and Protocols Directory.pdf):
+  // every row must exist, on the right side of the split.
+  const PDF_ALGORITHMS = [
+    'shor', 'grover', 'deutsch-jozsa', 'bernstein-vazirani', 'simon', 'qpe', 'qft', 'hhl', 'vqe', 'qaoa',
+    'amplitude-amplification', 'shor-dlog', 'quantum-walk', 'quantum-counting', 'element-distinctness',
+    'triangle-finding', 'boson-sampling', 'qsvm', 'qpca', 'hamiltonian-simulation',
+  ]
+  const PDF_PROTOCOLS = [
+    'bb84', 'e91', 'b92', 'teleportation', 'superdense', 'entanglement-swapping', 'mdi-qkd', 'decoy-state',
+    'tf-qkd', 'secret-sharing', 'coin-flipping', 'wiesner-money', 'shor-code', 'surface-code', 'steane-code',
+    'tomography', 'randomized-benchmarking', 'cv-qkd', 'clock-sync',
+  ]
+
+  it('covers every algorithm and protocol in the course directory', () => {
+    expect(PDF_ALGORITHMS).toHaveLength(20)
+    expect(PDF_PROTOCOLS).toHaveLength(19)
+    for (const id of PDF_ALGORITHMS) expect(PURE_ALGORITHMS.map((a) => a.id)).toContain(id)
+    for (const id of PDF_PROTOCOLS) expect(PROTOCOLS.map((a) => a.id)).toContain(id)
   })
 
   it('the two tracks partition the library with nothing lost or duplicated', () => {
     expect(PROTOCOLS.length + PURE_ALGORITHMS.length).toBe(ALGORITHMS.length)
-    const ids = [...PROTOCOLS, ...PURE_ALGORITHMS].map((a) => a.id)
-    expect(new Set(ids).size).toBe(ALGORITHMS.length)
+    expect(new Set(ALGORITHMS.map((a) => a.id)).size).toBe(ALGORITHMS.length)
+    for (const a of ALGORITHMS) expect(TRACK_ORDER).toContain(a.track)
+    for (const p of PROTOCOLS) expect(p.track).toBe('protocol')
+    for (const a of PURE_ALGORITHMS) expect(a.track).toBe('algorithm')
   })
 
-  it('puts the entanglement protocols on one side and the computations on the other', () => {
-    expect(PROTOCOLS.map((a) => a.id)).toEqual(['bell', 'teleportation', 'superdense'])
-    expect(PURE_ALGORITHMS.map((a) => a.id)).toEqual(['deutsch-jozsa', 'bernstein-vazirani', 'grover', 'qft', 'qpe'])
-  })
-
-  it('every track is non-empty, so neither card opens onto nothing', () => {
-    for (const id of TRACK_ORDER) expect(TRACKS[id].items.length).toBeGreaterThan(0)
-  })
-
-  it('protocols carry the fields their panels render', () => {
-    for (const p of PROTOCOLS) {
-      expect(p.delivers).toBeTruthy()
-      expect(p.cost.note).toBeTruthy()
-      expect(p.parties.length).toBeGreaterThan(0)
-      // Every party must name a real qubit in the built circuit, or the
-      // "who holds what" list and the spheres below it disagree.
-      const labels = p.build(defaultParams(p)).labels
-      for (const party of p.parties) expect(labels).toContain(party.qubit)
+  it('every entry has its directory columns, a group, and an explanation', () => {
+    for (const a of ALGORITHMS) {
+      for (const col of COLUMNS[a.track]) expect(a.dir?.[col.key], `${a.id}.dir.${col.key}`).toBeTruthy()
+      expect(GROUPS[a.track].map((g) => g.id), a.id).toContain(a.group)
+      for (const field of ['name', 'summary', 'analogy', 'keyIdea', 'level', 'speedup']) expect(a[field], `${a.id}.${field}`).toBeTruthy()
     }
   })
 
-  it('teleportation spends an ebit and two classical bits, sending no qubit', () => {
-    const t = PROTOCOLS.find((a) => a.id === 'teleportation')
-    expect(t.cost).toMatchObject({ ebits: 1, qubitsSent: 0, classicalBits: 2 })
+  it('every entry has a flowchart made of known step kinds', () => {
+    const KINDS = ['quantum', 'classical', 'measure', 'decision']
+    for (const a of ALGORITHMS) {
+      expect(a.flow?.length, a.id).toBeGreaterThan(2)
+      for (const step of a.flow) {
+        expect(KINDS, `${a.id}: ${step.title}`).toContain(step.kind)
+        expect(step.title).toBeTruthy()
+        if (a.lanes) expect(a.lanes, `${a.id}: lane ${step.lane}`).toContain(step.lane)
+      }
+    }
   })
 
-  it('superdense sends one qubit and no classical bits', () => {
-    const s = PROTOCOLS.find((a) => a.id === 'superdense')
-    expect(s.cost).toMatchObject({ ebits: 1, qubitsSent: 1, classicalBits: 0 })
+  it('every entry is interactive: a circuit, a lab, or both', () => {
+    for (const a of ALGORITHMS) expect(Boolean(a.build) || Boolean(a.lab), a.id).toBe(true)
+  })
+
+  it('every group is used, so the rail has no empty headings', () => {
+    for (const id of TRACK_ORDER) for (const g of GROUPS[id]) expect(TRACKS[id].items.some((a) => a.group === g.id), g.id).toBe(true)
+  })
+
+  it('parties name real qubits in the built circuit', () => {
+    for (const p of ALGORITHMS.filter((a) => a.parties && a.build)) {
+      const labels = p.build(defaultParams(p)).labels
+      for (const party of p.parties) expect(labels, p.id).toContain(party.qubit)
+    }
+  })
+
+  it('teleportation and superdense coding keep their contrasting ledgers', () => {
+    expect(PROTOCOLS.find((a) => a.id === 'teleportation').cost).toMatchObject({ ebits: 1, qubitsSent: 0, classicalBits: 2 })
+    expect(PROTOCOLS.find((a) => a.id === 'superdense').cost).toMatchObject({ ebits: 1, qubitsSent: 1, classicalBits: 0 })
   })
 
   it('only algorithms advertise a query advantage', () => {

@@ -1,6 +1,6 @@
 import { ArrowRight, Binary, Check, Network } from 'lucide-react'
 
-import { TRACK_ORDER, TRACKS } from './library'
+import { GROUPS, TRACK_ORDER, TRACKS } from './library'
 
 const ICONS = { protocol: Network, algorithm: Binary }
 const LETTERS = ['A', 'B']
@@ -35,8 +35,8 @@ export default function TrackChooser({ onPick }) {
       <header className="mb-6 text-center">
         <h2 className="text-xl font-semibold tracking-tight text-slate-100">What would you like to step through?</h2>
         <p className="mx-auto mt-1.5 max-w-xl text-sm leading-relaxed text-slate-400">
-          Both run in the same gate-by-gate debugger. They differ in what counts as success — moving information, or
-          computing an answer.
+          Every entry from the course directory, each with a step-by-step flowchart, an interactive lab and, where it is a
+          gate circuit, a qubit-by-qubit debugger.
         </p>
       </header>
 
@@ -84,12 +84,16 @@ export default function TrackChooser({ onPick }) {
                 ))}
               </ul>
 
-              <div className="mt-4 flex flex-wrap content-start gap-1.5 border-t border-lab-700/70 pt-3">
-                {track.items.map((a) => (
-                  <span key={a.id} className="rounded-md bg-lab-850 px-1.5 py-0.5 text-[10px] text-slate-400">
-                    {a.name}
-                  </span>
-                ))}
+              <div className="mt-4 space-y-1 border-t border-lab-700/70 pt-3">
+                {GROUPS[id].map((g) => {
+                  const names = track.items.filter((a) => a.group === g.id).map((a) => a.name)
+                  return (
+                    <p key={g.id} className="text-[11px] leading-snug">
+                      <span className={`font-semibold ${tone.accent}`}>{g.label}</span>
+                      <span className="text-slate-500"> · {names.join(', ')}</span>
+                    </p>
+                  )
+                })}
               </div>
 
               <span className={`mt-auto flex items-center gap-1 pt-3.5 text-xs font-medium ${tone.accent}`}>

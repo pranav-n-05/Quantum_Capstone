@@ -13,10 +13,12 @@
       ;(function () {
         try {
           var stored = localStorage.getItem('qtd-theme')
+          // "System" = time of day: light 06:00-17:59, dark otherwise.
+          var hour = new Date().getHours()
           var theme =
             stored === 'light' || stored === 'dark'
               ? stored
-              : window.matchMedia('(prefers-color-scheme: light)').matches
+              : hour >= 6 && hour < 18
                 ? 'light'
                 : 'dark'
           var root = document.documentElement

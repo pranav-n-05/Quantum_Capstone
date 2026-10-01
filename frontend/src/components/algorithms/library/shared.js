@@ -49,3 +49,59 @@ export const inverse = (ops) =>
   [...ops].reverse().map((op) => (op.angle === undefined ? op : { ...op, angle: -op.angle }))
 
 export const DEG = Math.PI / 180
+
+/**
+ * Flip the sign of one basis state of `qubits` (listed least-significant
+ * first; `bits` written most-significant first, like toBits). One multi-
+ * controlled Z with negative controls where the pattern has a 0.
+ */
+export function markState(bits, qubits) {
+  const target = qubits[qubits.length - 1]
+  const others = qubits.slice(0, -1)
+  const c = others.filter((q, i) => bits[bits.length - 1 - i] === '1')
+  const nc = others.filter((q, i) => bits[bits.length - 1 - i] === '0')
+  const z = { g: 'z', t: [target], ...(c.length ? { c } : {}), ...(nc.length ? { nc } : {}) }
+  return bits[0] === '1' ? [z] : [gate('x', target), z, gate('x', target)]
+}
+
+/** Grover's diffusion 2|s⟩⟨s| − I on `qubits` (global sign kept textbook). */
+export function diffusionOps(qubits) {
+  const top = qubits[qubits.length - 1]
+  const rest = qubits.slice(0, -1)
+  return [
+    ...onEach('h', qubits),
+    ...onEach('x', qubits),
+    { g: 'z', t: [top], c: rest },
+    ...onEach('x', qubits),
+    ...onEach('h', qubits),
+    { g: 'gphase', t: [], angle: Math.PI },
+  ]
+}
+
+/** Controlled-SWAP from three Toffolis. */
+export const cswap = (control, a, b) => [cx(b, a), { g: 'cx', c: [control, a], t: [b] }, cx(b, a)]
+
+/** |v⟩ → |a·v mod N⟩ on a register of `bits` qubits (values ≥ N left alone). */
+export const mulModMap = (a, N, bits) => range(2 ** bits).map((v) => (v < N ? (a * v) % N : v))
+
+/** Add a control qubit to every op (global phases become phase gates on it). */
+export const controlled = (ops, control) =>
+  ops.map((op) =>
+    op.g === 'gphase' ? { g: 'p', t: [control], angle: op.angle } : { ...op, c: [...(op.c ?? []), control] },
+  )
+
+export const ry = (angle, q) => ({ g: 'ry', t: [q], angle })
+export const rz = (angle, q) => ({ g: 'rz', t: [q], angle })
+export const rx = (angle, q) => ({ g: 'rx', t: [q], angle })
+export const mat = (m, q, extra = {}) => ({ g: 'mat', t: [q], m, ...extra })
+
+/** Inverse QFT ops on `qubits`, ready to drop into a step. */
+export function inverseQft(qubits) {
+  const { stages, swaps } = qftStages(qubits)
+  return inverse([...stages.flatMap((s) => s.ops), ...swaps])
+}
+
+export function forwardQft(qubits) {
+  const { stages, swaps } = qftStages(qubits)
+  return [...stages.flatMap((s) => s.ops), ...swaps]
+}

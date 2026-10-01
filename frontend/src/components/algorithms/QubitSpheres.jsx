@@ -12,7 +12,10 @@ import BlochSphere3D from '../bloch/BlochSphere3D'
  * qubit's arrow can shrink is entanglement -- the length of the arrow is an
  * entanglement meter you can read at a glance.
  */
+const MAX_WEBGL = 6
+
 export default function QubitSpheres({ state, labels, target }) {
+  const flat = labels.length > MAX_WEBGL
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-2 2xl:grid-cols-3">
       {labels.map((label, q) => {
@@ -40,6 +43,7 @@ export default function QubitSpheres({ state, labels, target }) {
               interactive={false}
               accent={entangled ? 'signal-violet' : 'signal-cyan'}
               className="h-32 w-full"
+              flat={flat}
             />
           </div>
         )

@@ -17,6 +17,19 @@ const ORACLES = {
 export default {
   id: 'deutsch-jozsa',
   track: 'algorithm',
+  group: 'oracle',
+  dir: { problem: 'Black-box function evaluation', advantage: 'Exponential (deterministic)', mechanism: 'Quantum superposition, interference' },
+  keyIdea:
+    'Phase kickback writes f(x) into the sign of every amplitude at once. A final Hadamard adds those signs up: if they all agree they pile onto |000⟩; if half disagree they cancel there exactly.',
+  limits: 'The promise matters: the function must be either constant or exactly balanced. A randomised classical algorithm already answers with small error in a few queries.',
+  flow: [
+    { lane: 'Quantum computer', title: 'Prepare |0…0⟩|1⟩', text: 'n input qubits and one answer qubit.', kind: 'quantum' },
+    { lane: 'Quantum computer', title: 'Hadamard everything', text: 'All 2ⁿ inputs at once; the answer qubit becomes |−⟩.', kind: 'quantum' },
+    { lane: 'Quantum computer', title: 'One oracle call', text: 'f(x) = 1 flips that input’s sign (phase kickback).', kind: 'quantum' },
+    { lane: 'Quantum computer', title: 'Hadamard the inputs', text: 'Signs interfere.', kind: 'quantum' },
+    { lane: 'Quantum computer', title: 'Measure the inputs', text: 'All zeros?', kind: 'decision' },
+    { lane: 'Classical computer', title: 'Decide', text: '000 → constant · anything else → balanced. Certain, after one query.', kind: 'classical', via: 'classical' },
+  ],
   name: 'Deutsch–Jozsa',
   level: 'Intermediate',
   category: 'Oracle',
