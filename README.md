@@ -8,6 +8,9 @@ It runs out of the box with **zero credentials**, using a physically plausible
 simulator. Supply an IBM Cloud API key and it streams live data from the real
 IBM Quantum Compute Service REST API.
 
+**Live demo: https://quantum-capstone.onrender.com** — hosted on Render's free
+tier, so the first visit after 15 idle minutes takes about a minute to wake.
+
 ```bash
 # Terminal 1 — backend
 python3 -m venv .venv && ./.venv/bin/pip install -r backend/requirements.txt
@@ -444,6 +447,9 @@ A platform that runs containers as long-lived processes is therefore required.
 `render.yaml` is a Blueprint: point Render at the repo and it configures the
 service, health check and environment. Credentials are set in the dashboard, not
 in the file.
+
+The deployed instance is **https://quantum-capstone.onrender.com**. Render
+redeploys it on every push to `main`.
 
 The playground's dependencies are the heaviest thing in the image: qiskit, Aer,
 numpy and scipy add roughly **175 MB**. Measured impact on the running service
