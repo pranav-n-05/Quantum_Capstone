@@ -28,7 +28,7 @@ import {
 import { Slider, Tabs } from '../../bloch/ui'
 import { BarChartBox, LabSection, LineChartBox, Note, pct, ScatterBox, SeedControl, Stat, Stats } from './kit'
 
-const GLYPH = { Z: ['↔', '↕'], X: ['⤢', '⤡'] }
+const GLYPH = { Z: ['↔︎', '↕︎'], X: ['⤢', '⤡'] }
 const glyph = (basis, bit) => GLYPH[basis][bit]
 const deg = (r) => `${Math.round((r * 180) / Math.PI)}°`
 
@@ -113,7 +113,7 @@ export function Bb84Lab() {
             bad(r.error),
           ])}
         />
-        <p className="text-[10px] text-slate-500">↔ ↕ = Z basis (0, 1) · ⤢ ⤡ = X basis (0, 1). Rows with different bases are discarded after the public comparison.</p>
+        <p className="text-[10px] text-slate-500">↔︎ ↕︎ = Z basis (0, 1) · ⤢ ⤡ = X basis (0, 1). Rows with different bases are discarded after the public comparison.</p>
       </LabSection>
 
       <LabSection title="Why 25%: QBER vs. how much Eve listens">

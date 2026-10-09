@@ -16,7 +16,7 @@ export default {
   summary: 'Alice sends single photons in random bases; Bob measures in random bases; they keep the matching ones. A spy must guess bases and inevitably leaves errors.',
   delivers: 'A shared secret key, with a guarantee: any eavesdropping shows up as errors.',
   parties: [
-    { qubit: 'photon', who: 'Alice → Bob', role: 'one qubit per round, in basis Z (↕↔) or X (⤢⤡)' },
+    { qubit: 'photon', who: 'Alice → Bob', role: 'one qubit per round, in basis Z (↕︎↔︎) or X (⤢⤡)' },
     { qubit: 'eve', who: 'Eve', role: 'her probe — measuring means entangling with it' },
   ],
   cost: { ebits: 0, qubitsSent: 1, classicalBits: 1, note: 'Per raw round: one photon, then a public basis announcement. About half the rounds survive sifting.' },
@@ -28,7 +28,7 @@ export default {
   lab: 'bb84',
   lanes: ['Alice', 'Eve', 'Bob'],
   flow: [
-    { lane: 'Alice', title: 'Random bit + random basis', text: 'Z: 0→↔, 1→↕   ·   X: 0→⤢, 1→⤡', kind: 'classical' },
+    { lane: 'Alice', title: 'Random bit + random basis', text: 'Z: 0→↔︎, 1→↕︎   ·   X: 0→⤢, 1→⤡', kind: 'classical' },
     { lane: 'Alice', title: 'Send one photon', text: '', kind: 'quantum' },
     { lane: 'Eve', title: '(Maybe) intercept–resend', text: 'Guesses a basis, measures, re-sends.', kind: 'measure', via: 'quantum' },
     { lane: 'Bob', title: 'Measure in a random basis', text: '', kind: 'measure', via: 'quantum', loop: 'n rounds' },
@@ -39,7 +39,7 @@ export default {
   ],
   params: [
     { key: 'bit', label: 'Alice’s bit', options: [{ value: '0', label: '0' }, { value: '1', label: '1' }], default: '1' },
-    { key: 'alice', label: 'Alice’s basis', options: [{ value: 'Z', label: 'Z (↕↔)' }, { value: 'X', label: 'X (⤢⤡)' }], default: 'Z' },
+    { key: 'alice', label: 'Alice’s basis', options: [{ value: 'Z', label: 'Z (↕︎↔︎)' }, { value: 'X', label: 'X (⤢⤡)' }], default: 'Z' },
     { key: 'eve', label: 'Eve', options: [{ value: 'none', label: 'absent' }, { value: 'Z', label: 'measures in Z' }, { value: 'X', label: 'measures in X' }], default: 'X' },
     { key: 'bob', label: 'Bob’s basis', options: [{ value: 'Z', label: 'Z' }, { value: 'X', label: 'X' }], default: 'Z' },
   ],
